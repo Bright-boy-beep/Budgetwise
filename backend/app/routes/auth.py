@@ -1,10 +1,11 @@
 """
 routes/auth.py — Authentication endpoints.
 
-POST /api/auth/register  — create a new user account
-POST /api/auth/login     — authenticate and return a JWT
-GET  /api/auth/me        — return the current user's profile (protected)
-PUT  /api/auth/me        — update profile/preferences (protected)
+POST /api/auth/register         — create a new user account
+POST /api/auth/login            — authenticate and return a JWT
+GET  /api/auth/me               — return the current user's profile (protected)
+PUT  /api/auth/me               — update profile/preferences (protected)
+PUT  /api/auth/change-password  — change account password (protected)
 """
 
 import bcrypt
@@ -84,3 +85,25 @@ def update_me():
 
     db.session.commit()
     return jsonify(user.to_dict()), 200
+
+
+@auth_bp.put("/change-password")
+@jwt_required()
+def change_password():
+    user_id = int(get_jwt_identity())
+    user    = User.query.get_or_404(user_id)
+    data    = request.get_json(force=True, silent=True) or {}
+
+    current_password = data.get("current_password", "") or ""
+    new_password     = data.get("new_password",     "") or ""
+
+    if not current_password or not new_password:
+        return jsonify({"error": "Both current and new password are required."}), 400
+    if len(new_password) < 6:
+        return jsonify({"error": "New password must be at least 6 characters."}), 400
+    if not bcrypt.checkpw(current_password.encode(), user.password.encode()):
+        return jsonify({"error": "Current password is incorrect."}), 401
+
+    user.password = bcrypt.hashpw(new_password.encode(), bcrypt.gensalt()).decode()
+    db.session.commit()
+    return jsonify({"message": "Password updated successfully."}), 200

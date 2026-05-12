@@ -3502,3 +3502,96 @@ button:focus-visible {
 
 /* Budget alerts — remove emoji icon font-size (use svg) */
 .budget-alert-icon { display: flex; align-items: center; }
+
+/* ============================================================
+   MOBILE BOTTOM NAVIGATION
+   ============================================================ */
+.mobile-bottom-nav {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .mobile-bottom-nav {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 62px;
+    background: var(--bg-card);
+    border-top: 1px solid var(--border);
+    z-index: 200;
+    align-items: center;
+    padding: 0 4px;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* Push main content up so bottom nav doesn't overlap */
+  .main-content {
+    padding-bottom: 72px;
+  }
+
+  .mbn-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    padding: 6px 0;
+    color: var(--text-muted);
+    cursor: pointer;
+    text-decoration: none;
+    transition: color 0.18s ease;
+    border-radius: 10px;
+  }
+
+  .mbn-item span {
+    font-size: 9px;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+  }
+
+  .mbn-item svg {
+    stroke-width: 1.8;
+    transition: stroke 0.18s ease;
+  }
+
+  .mbn-item.active {
+    color: var(--accent);
+  }
+
+  .mbn-item.active svg {
+    stroke: var(--accent);
+    stroke-width: 2.2;
+  }
+
+  .mbn-add {
+    flex: 0 0 52px;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    margin: 0 8px;
+    box-shadow: 0 4px 14px rgba(123,92,245,0.35);
+    transition: background 0.18s ease, transform 0.15s ease;
+    flex-shrink: 0;
+  }
+
+  .mbn-add svg {
+    stroke: white;
+  }
+
+  .mbn-add:active {
+    transform: scale(0.94);
+  }
+
+  /* Hide sidebar hamburger on mobile — bottom nav replaces it */
+  .topbar-menu-btn {
+    display: none;
+  }
+}

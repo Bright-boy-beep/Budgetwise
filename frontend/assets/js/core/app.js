@@ -71,8 +71,21 @@ function navigate(page) {
 
   currentPage = page;
 
+  // Sync mobile bottom nav active state
+  mbnSetActive(page);
+
   // Render page-specific content
   renderPage(page);
+}
+
+function mbnSetActive(page) {
+  const map = { dashboard: 'mbn-dashboard', transactions: 'mbn-transactions', budgets: 'mbn-budgets', settings: 'mbn-settings' };
+  document.querySelectorAll('.mbn-item').forEach(el => el.classList.remove('active'));
+  const activeId = map[page];
+  if (activeId) {
+    const el = document.getElementById(activeId);
+    if (el) el.classList.add('active');
+  }
 }
 
 function renderPage(page) {
@@ -236,6 +249,32 @@ async function saveSettings() {
   }
 }
 
+async function changePassword() {
+  const current = document.getElementById('pw-current').value;
+  const newPw   = document.getElementById('pw-new').value;
+  const confirm = document.getElementById('pw-confirm').value;
+
+  if (!current)          { showToast('Please enter your current password.'); return; }
+  if (!newPw)            { showToast('Please enter a new password.'); return; }
+  if (newPw.length < 6)  { showToast('New password must be at least 6 characters.'); return; }
+  if (newPw !== confirm) { showToast('New passwords do not match.'); return; }
+
+  const btn = document.querySelector('#page-settings .settings-card button[onclick="changePassword()"]');
+  if (btn) { btn.disabled = true; btn.textContent = 'Updating…'; }
+
+  try {
+    await API.put('/auth/change-password', { current_password: current, new_password: newPw });
+    showToast('Password updated successfully.', 'success');
+    document.getElementById('pw-current').value = '';
+    document.getElementById('pw-new').value      = '';
+    document.getElementById('pw-confirm').value  = '';
+  } catch (e) {
+    showToast(e.message || 'Could not update password. Please try again.', 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Update password'; }
+  }
+}
+
 function updateCurrencyLabels() {
   const curr = DB.getSettings().currency || '₦';
   document.querySelectorAll('.currency-label').forEach(el => el.textContent = curr);
@@ -259,6 +298,62 @@ function exportData() {
   a.click();
   URL.revokeObjectURL(url);
   showToast('Backup exported — keep it somewhere safe.', 'success');
+}
+
+async function importData(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  // Reset input so same file can be re-selected
+  event.target.value = '';
+
+  const text = await file.text();
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    showToast('Invalid file — could not read the backup.', 'error');
+    return;
+  }
+
+  // Validate it's a BudgetWise export
+  if (!data.transactions && !data.budgets) {
+    showToast('This doesn\'t look like a BudgetWise backup file.', 'error');
+    return;
+  }
+
+  if (!confirm(
+    `This will import:\n• ${(data.transactions || []).length} transactions\n• ${(data.budgets || []).length} budgets\n\nExisting data will not be deleted. Continue?`
+  )) return;
+
+  let txImported = 0, budgetImported = 0, failed = 0;
+
+  // Import transactions
+  for (const tx of (data.transactions || [])) {
+    try {
+      await DB.addTransaction({
+        description: tx.description,
+        amount:      tx.amount,
+        type:        tx.type,
+        category:    tx.category,
+        date:        tx.date,
+        note:        tx.note || '',
+      });
+      txImported++;
+    } catch { failed++; }
+  }
+
+  // Import budgets
+  for (const b of (data.budgets || [])) {
+    try {
+      await DB.addBudget({ category: b.category, limit: b.limit, month: b.month });
+      budgetImported++;
+    } catch { /* skip duplicates */ }
+  }
+
+  const summary = `Imported ${txImported} transaction${txImported !== 1 ? 's' : ''} and ${budgetImported} budget${budgetImported !== 1 ? 's' : ''}.`;
+  showToast(summary, failed > 0 ? 'info' : 'success', 4000);
+  refreshAll();
 }
 
 function exportCSV() {

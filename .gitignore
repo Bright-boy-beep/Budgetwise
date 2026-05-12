@@ -9,3 +9,4 @@ ml/saved_models/
 Thumbs.db
 *.log
 push_to_github.bat
+js/

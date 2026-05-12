@@ -1101,6 +1101,35 @@
             </button>
           </div>
 
+          <!-- Change Password card -->
+          <div class="settings-card">
+            <div class="settings-card-header">
+              <div class="settings-card-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                </svg>
+              </div>
+              <div>
+                <div class="settings-card-title">Change Password</div>
+                <div class="settings-card-sub">Update your account password</div>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Current password</label>
+              <input type="password" id="pw-current" placeholder="••••••••"/>
+            </div>
+            <div class="form-group">
+              <label>New password</label>
+              <input type="password" id="pw-new" placeholder="Min 6 characters"/>
+            </div>
+            <div class="form-group">
+              <label>Confirm new password</label>
+              <input type="password" id="pw-confirm" placeholder="Repeat new password"/>
+            </div>
+            <button class="btn-primary" onclick="changePassword()">Update password</button>
+          </div>
+
           <!-- Data Management card -->
           <div class="settings-card settings-card-danger">
             <div class="settings-card-header">
@@ -1146,6 +1175,21 @@
                 </div>
                 <button class="btn-outline sm" onclick="exportData()">Export</button>
               </div>
+              <div class="data-mgmt-item">
+                <div class="data-mgmt-icon" style="background:var(--accent-light);color:var(--accent)">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="17 8 12 3 7 8"/>
+                    <line x1="12" y1="3" x2="12" y2="15"/>
+                  </svg>
+                </div>
+                <div>
+                  <div class="data-mgmt-label">Import JSON</div>
+                  <div class="data-mgmt-hint">Restore from a backup file</div>
+                </div>
+                <button class="btn-outline sm" onclick="document.getElementById('import-json-input').click()">Import</button>
+                <input type="file" id="import-json-input" accept=".json" style="display:none" onchange="importData(event)"/>
+              </div>
               <div class="data-mgmt-item danger">
                 <div class="data-mgmt-icon" style="background:var(--red-light);color:var(--red)">
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1170,6 +1214,29 @@
 
   </main>
 </div>
+
+<!-- ===================== MOBILE BOTTOM NAV ===================== -->
+<nav class="mobile-bottom-nav" id="mobile-bottom-nav">
+  <a class="mbn-item active" id="mbn-dashboard" onclick="navigate('dashboard');mbnSetActive('dashboard')">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+    <span>Home</span>
+  </a>
+  <a class="mbn-item" id="mbn-transactions" onclick="navigate('transactions');mbnSetActive('transactions')">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+    <span>Transactions</span>
+  </a>
+  <a class="mbn-add" onclick="openAddModal()">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+  </a>
+  <a class="mbn-item" id="mbn-budgets" onclick="navigate('budgets');mbnSetActive('budgets')">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12V8H6a2 2 0 010-4h14v4"/><path d="M4 6v13a2 2 0 002 2h14v-5"/><path d="M18 12a2 2 0 000 4h4v-4z"/></svg>
+    <span>Budgets</span>
+  </a>
+  <a class="mbn-item" id="mbn-settings" onclick="navigate('settings');mbnSetActive('settings')">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 010 14.14M4.93 4.93a10 10 0 000 14.14"/><path d="M15.54 8.46a5 5 0 010 7.07M8.46 8.46a5 5 0 000 7.07"/></svg>
+    <span>Settings</span>
+  </a>
+</nav>
 
 <!-- ===================== ADD TRANSACTION MODAL ===================== -->
 <div id="add-modal" class="modal-overlay hidden" onclick="closeModalOnOverlay(event,'add-modal')">
