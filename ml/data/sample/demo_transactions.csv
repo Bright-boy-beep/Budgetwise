@@ -1,0 +1,31 @@
+type,description,amount,category,date
+expense,Monthly Rent Payment,80000,Housing,2025-01-02
+expense,Shoprite Grocery Shopping,22000,Food & Dining,2025-01-04
+expense,Uber Ride to Work,3500,Transportation,2025-01-05
+income,Monthly Salary,450000,Salary,2025-01-01
+income,Freelance Web Design,75000,Freelance,2025-01-06
+expense,Netflix Subscription,4500,Entertainment,2025-01-07
+expense,Pharmacy Visit,15000,Healthcare,2025-01-09
+expense,Restaurant Dinner,12000,Food & Dining,2025-01-11
+expense,Electricity Bill,18000,Utilities,2025-01-12
+expense,Online Shopping (Jumia),35000,Shopping,2025-01-14
+income,Investment Dividend,25000,Investment,2025-01-15
+expense,Gym Membership,8000,Personal Care,2025-01-16
+expense,Monthly Rent Payment,80000,Housing,2025-02-02
+expense,Supermarket Run,28000,Food & Dining,2025-02-05
+expense,Fuel for Car,15000,Transportation,2025-02-08
+income,Monthly Salary,450000,Salary,2025-02-01
+income,Side Business Revenue,60000,Business,2025-02-10
+expense,Data Plan Renewal,9000,Utilities,2025-02-12
+expense,Textbooks and Courses,20000,Education,2025-02-15
+expense,Weekend Trip Lagos,45000,Travel,2025-02-20
+expense,Monthly Rent Payment,80000,Housing,2025-03-02
+expense,Grocery Shopping,24000,Food & Dining,2025-03-04
+expense,Bus Pass,5000,Transportation,2025-03-06
+income,Monthly Salary,450000,Salary,2025-03-01
+expense,Cinema Tickets,6000,Entertainment,2025-03-08
+expense,Doctor Appointment,12000,Healthcare,2025-03-10
+expense,Water Bill,7000,Utilities,2025-03-13
+expense,Amazon Shopping,42000,Shopping,2025-03-17
+income,Freelance Logo Design,30000,Freelance,2025-03-20
+expense,Haircut and Grooming,5000,Personal Care,2025-03-22
