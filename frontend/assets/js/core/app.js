@@ -101,6 +101,7 @@ function renderPage(page) {
       renderHealthScore();
       renderForecastWidget();
       renderInsightsCard();
+      generateNotifications();
       break;
     case 'transactions':
       renderAllTransactions();
@@ -875,6 +876,318 @@ function renderInsightsCard() {
     `;
     bodyEl.appendChild(el);
   });
+}
+
+// ============================================================
+// DEMO DATA LOADER
+// ============================================================
+
+async function loadDemoData() {
+  if (!confirm(
+    'This will add 4 months of realistic sample transactions, budgets, and goals.\n\nYour existing data will NOT be deleted. Continue?'
+  )) return;
+
+  const btn = document.getElementById('demo-load-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Loading…'; }
+
+  try {
+    const now = new Date();
+
+    // Returns YYYY-MM-DD for (monthOffset, day), clamped to valid calendar dates
+    function ds(monthOffset, day) {
+      const d = new Date(now.getFullYear(), now.getMonth() + monthOffset, 1);
+      const daysInMonth = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+      d.setDate(Math.min(day, daysInMonth));
+      return d.toISOString().split('T')[0];
+    }
+
+    const today = now.toISOString().split('T')[0];
+
+    const transactions = [
+      // ── 3 months ago ─────────────────────────────────────────────
+      { date: ds(-3,  1), type: 'income',  description: 'Monthly Salary',          category: 'Income',       amount: 150000 },
+      { date: ds(-3,  3), type: 'expense', description: 'Electricity Bill',         category: 'Utilities',    amount: 18500  },
+      { date: ds(-3,  6), type: 'expense', description: 'Grocery Shopping',         category: 'Food & Dining',amount: 22000  },
+      { date: ds(-3,  9), type: 'expense', description: 'Uber rides',               category: 'Transport',    amount: 8500   },
+      { date: ds(-3, 11), type: 'expense', description: 'Netflix subscription',     category: 'Entertainment',amount: 4600   },
+      { date: ds(-3, 13), type: 'expense', description: 'Lunch at restaurant',      category: 'Food & Dining',amount: 6800   },
+      { date: ds(-3, 15), type: 'income',  description: 'Freelance Project',        category: 'Income',       amount: 65000  },
+      { date: ds(-3, 17), type: 'expense', description: 'New shoes',                category: 'Shopping',     amount: 28000  },
+      { date: ds(-3, 19), type: 'expense', description: 'Internet bill',            category: 'Utilities',    amount: 12000  },
+      { date: ds(-3, 21), type: 'expense', description: 'Doctor visit',             category: 'Healthcare',   amount: 15000  },
+      { date: ds(-3, 24), type: 'expense', description: 'Fuel',                     category: 'Transport',    amount: 12000  },
+      { date: ds(-3, 27), type: 'expense', description: 'Online course',            category: 'Education',    amount: 20000  },
+
+      // ── 2 months ago ─────────────────────────────────────────────
+      { date: ds(-2,  1), type: 'income',  description: 'Monthly Salary',          category: 'Income',       amount: 150000 },
+      { date: ds(-2,  3), type: 'expense', description: 'Electricity Bill',         category: 'Utilities',    amount: 21000  },
+      { date: ds(-2,  5), type: 'expense', description: 'Grocery Shopping',         category: 'Food & Dining',amount: 19500  },
+      { date: ds(-2,  8), type: 'expense', description: 'Bus fare',                 category: 'Transport',    amount: 6000   },
+      { date: ds(-2, 10), type: 'expense', description: 'Cinema tickets',           category: 'Entertainment',amount: 8000   },
+      { date: ds(-2, 12), type: 'expense', description: 'Lunch & dinner out',       category: 'Food & Dining',amount: 14200  },
+      { date: ds(-2, 14), type: 'expense', description: 'Phone accessories',        category: 'Shopping',     amount: 15000  },
+      { date: ds(-2, 16), type: 'income',  description: 'Side hustle payment',      category: 'Income',       amount: 42000  },
+      { date: ds(-2, 18), type: 'expense', description: 'Internet bill',            category: 'Utilities',    amount: 12000  },
+      { date: ds(-2, 20), type: 'expense', description: 'Fuel',                     category: 'Transport',    amount: 9500   },
+      { date: ds(-2, 22), type: 'expense', description: 'Laptop accessories',       category: 'Shopping',     amount: 95000  }, // anomaly
+      { date: ds(-2, 25), type: 'expense', description: 'Pharmacy',                 category: 'Healthcare',   amount: 5500   },
+      { date: ds(-2, 27), type: 'expense', description: 'Books & study material',   category: 'Education',    amount: 18000  },
+
+      // ── Last month ───────────────────────────────────────────────
+      { date: ds(-1,  1), type: 'income',  description: 'Monthly Salary',          category: 'Income',       amount: 150000 },
+      { date: ds(-1,  2), type: 'expense', description: 'Electricity Bill',         category: 'Utilities',    amount: 19800  },
+      { date: ds(-1,  4), type: 'expense', description: 'Grocery Shopping',         category: 'Food & Dining',amount: 24000  },
+      { date: ds(-1,  6), type: 'expense', description: 'Uber rides',               category: 'Transport',    amount: 11000  },
+      { date: ds(-1,  9), type: 'expense', description: 'Spotify + Netflix',         category: 'Entertainment',amount: 6600   },
+      { date: ds(-1, 11), type: 'expense', description: 'Fast food & drinks',       category: 'Food & Dining',amount: 9800   },
+      { date: ds(-1, 14), type: 'income',  description: 'Freelance Design Work',    category: 'Income',       amount: 78000  },
+      { date: ds(-1, 15), type: 'expense', description: 'Clothes shopping',         category: 'Shopping',     amount: 32000  },
+      { date: ds(-1, 18), type: 'expense', description: 'Internet bill',            category: 'Utilities',    amount: 12000  },
+      { date: ds(-1, 20), type: 'expense', description: 'Fuel',                     category: 'Transport',    amount: 13500  },
+      { date: ds(-1, 22), type: 'expense', description: 'Gym membership',           category: 'Healthcare',   amount: 8000   },
+      { date: ds(-1, 24), type: 'expense', description: 'Online courses',           category: 'Education',    amount: 22000  },
+      { date: ds(-1, 27), type: 'expense', description: 'Dinner with friends',      category: 'Food & Dining',amount: 18500  },
+
+      // ── This month (partial — only dates up to today) ────────────
+      { date: ds(0,  1), type: 'income',  description: 'Monthly Salary',           category: 'Income',       amount: 150000 },
+      { date: ds(0,  2), type: 'expense', description: 'Electricity Bill',          category: 'Utilities',    amount: 20500  },
+      { date: ds(0,  4), type: 'expense', description: 'Grocery Shopping',          category: 'Food & Dining',amount: 16000  },
+      { date: ds(0,  6), type: 'expense', description: 'Uber rides',                category: 'Transport',    amount: 7000   },
+      { date: ds(0,  8), type: 'expense', description: 'Cinema & snacks',           category: 'Entertainment',amount: 9500   },
+      { date: ds(0,  9), type: 'expense', description: 'Restaurant lunch',          category: 'Food & Dining',amount: 7200   },
+      { date: ds(0, 10), type: 'expense', description: 'Emergency home repair',     category: 'Utilities',    amount: 85000  }, // anomaly
+      { date: ds(0, 12), type: 'expense', description: 'Fuel',                      category: 'Transport',    amount: 8500   },
+      { date: ds(0, 14), type: 'expense', description: 'Pharmacy',                  category: 'Healthcare',   amount: 6200   },
+      { date: ds(0, 15), type: 'income',  description: 'Bonus payment',             category: 'Income',       amount: 35000  },
+    ].filter(t => t.date <= today); // never insert future dates
+
+    let txCount = 0;
+    for (const tx of transactions) {
+      try { await DB.addTransaction({ ...tx, note: '' }); txCount++; } catch { /* skip */ }
+    }
+
+    // Budgets for current month
+    const curMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const budgets = [
+      { category: 'Food & Dining', limit: 35000, month: curMonth },
+      { category: 'Transport',     limit: 15000, month: curMonth },
+      { category: 'Shopping',      limit: 25000, month: curMonth },
+      { category: 'Entertainment', limit: 12000, month: curMonth },
+      { category: 'Utilities',     limit: 25000, month: curMonth },
+      { category: 'Healthcare',    limit: 10000, month: curMonth },
+    ];
+    let budgetCount = 0;
+    for (const b of budgets) {
+      try { await DB.addBudget(b); budgetCount++; } catch { /* skip duplicates */ }
+    }
+
+    // Goals
+    const goals = [
+      { name: 'Emergency Fund',   target_amount: 500000, current_amount: 185000 },
+      { name: 'New Laptop',       target_amount: 250000, current_amount: 227500 },
+      { name: 'Vacation Savings', target_amount: 300000, current_amount:  45000 },
+    ];
+    let goalCount = 0;
+    for (const g of goals) {
+      try { await DB.addGoal(g); goalCount++; } catch { /* skip */ }
+    }
+
+    showToast(
+      `Demo loaded — ${txCount} transactions, ${budgetCount} budgets, ${goalCount} goals added.`,
+      'success', 5000
+    );
+    navigate('dashboard');
+
+  } catch (e) {
+    showToast('Could not load demo data. Please try again.', 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Load demo data'; }
+  }
+}
+
+// ============================================================
+// NOTIFICATION CENTRE
+// ============================================================
+
+const NOTIF_KEY = 'bw_notifications';
+
+function _loadNotifs() {
+  try { return JSON.parse(localStorage.getItem(NOTIF_KEY) || '[]'); } catch { return []; }
+}
+
+function _saveNotifs(list) {
+  localStorage.setItem(NOTIF_KEY, JSON.stringify(list));
+}
+
+/**
+ * Scan the current data and produce notifications.
+ * Deduplicates by ID so repeated dashboard visits don't stack duplicates.
+ */
+function generateNotifications() {
+  const txs      = DB.getTransactions();
+  const budgets  = DB.getBudgets();
+  const goals    = (typeof DB.getGoals === 'function') ? DB.getGoals() : [];
+  const settings = DB.getSettings();
+  const curr     = settings.currency || '₦';
+  const now      = new Date();
+  const curMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const curTxs   = txs.filter(t => t.date.startsWith(curMonth));
+
+  const existing = _loadNotifs();
+  const existIds = new Set(existing.map(n => n.id));
+  const fresh    = [];
+
+  // ── Budget alerts ────────────────────────────────────────────────────────
+  const curBudgets = budgets.filter(b => b.month === curMonth);
+  curBudgets.forEach(b => {
+    const spent = curTxs
+      .filter(t => t.type === 'expense' && t.category === b.category)
+      .reduce((s, t) => s + t.amount, 0);
+    const pct = b.limit > 0 ? (spent / b.limit) * 100 : 0;
+
+    if (pct >= 100) {
+      const id = `budget-over-${curMonth}-${b.category}`;
+      if (!existIds.has(id)) {
+        fresh.push({
+          id, type: 'danger', read: false, ts: Date.now(),
+          title: `Budget exceeded — ${b.category}`,
+          body:  `You've spent ${curr}${Math.round(spent).toLocaleString()} of your ${curr}${Math.round(b.limit).toLocaleString()} budget (${Math.round(pct)}%).`,
+        });
+      }
+    } else if (pct >= 80) {
+      const id = `budget-warn-${curMonth}-${b.category}`;
+      if (!existIds.has(id)) {
+        fresh.push({
+          id, type: 'warning', read: false, ts: Date.now(),
+          title: `Budget almost full — ${b.category}`,
+          body:  `${Math.round(pct)}% used. ${curr}${Math.round(b.limit - spent).toLocaleString()} remaining this month.`,
+        });
+      }
+    }
+  });
+
+  // ── ML anomaly alerts ────────────────────────────────────────────────────
+  const anomalies = curTxs.filter(t => t.is_anomaly);
+  if (anomalies.length > 0) {
+    const id = `anomaly-${curMonth}-${anomalies.length}`;
+    if (!existIds.has(id)) {
+      fresh.push({
+        id, type: 'warning', read: false, ts: Date.now(),
+        title: `${anomalies.length} unusual transaction${anomalies.length > 1 ? 's' : ''} detected`,
+        body:  `The ML model flagged ${anomalies.length} suspicious transaction${anomalies.length > 1 ? 's' : ''} this month. Review them in ML Insights.`,
+      });
+    }
+  }
+
+  // ── Goal alerts ──────────────────────────────────────────────────────────
+  goals.forEach(g => {
+    const pct = g.target_amount > 0 ? (g.current_amount / g.target_amount) * 100 : 0;
+    if (pct >= 100) {
+      const id = `goal-done-${g.id}`;
+      if (!existIds.has(id)) {
+        fresh.push({
+          id, type: 'success', read: false, ts: Date.now(),
+          title: `Goal reached — ${g.name}`,
+          body:  `You've hit your ${curr}${Math.round(g.target_amount).toLocaleString()} target. Congratulations!`,
+        });
+      }
+    } else if (pct >= 90) {
+      const id = `goal-near-${g.id}`;
+      if (!existIds.has(id)) {
+        fresh.push({
+          id, type: 'info', read: false, ts: Date.now(),
+          title: `Almost there — ${g.name}`,
+          body:  `${Math.round(pct)}% of your goal reached. Just ${curr}${Math.round(g.target_amount - g.current_amount).toLocaleString()} to go!`,
+        });
+      }
+    }
+  });
+
+  // Merge fresh notifications at the front (newest first)
+  if (fresh.length > 0) {
+    _saveNotifs([...fresh, ...existing].slice(0, 50)); // cap at 50
+    renderNotifPanel();
+  }
+}
+
+/**
+ * Render the notification panel list and update the badge.
+ */
+function renderNotifPanel() {
+  const list    = _loadNotifs();
+  const listEl  = document.getElementById('notif-list');
+  const emptyEl = document.getElementById('notif-empty');
+  const badge   = document.getElementById('notif-badge');
+  if (!listEl) return;
+
+  const unread = list.filter(n => !n.read).length;
+
+  // Badge
+  if (badge) {
+    badge.textContent = unread > 9 ? '9+' : unread;
+    badge.classList.toggle('hidden', unread === 0);
+  }
+
+  // Remove existing items (keep empty placeholder)
+  listEl.querySelectorAll('.notif-item').forEach(el => el.remove());
+
+  if (list.length === 0) {
+    if (emptyEl) emptyEl.classList.remove('hidden');
+    return;
+  }
+  if (emptyEl) emptyEl.classList.add('hidden');
+
+  const typeIcons = { danger: '🔴', warning: '🟡', success: '🟢', info: '🔵' };
+
+  list.forEach(n => {
+    const item = document.createElement('div');
+    item.className = `notif-item notif-${n.type}${n.read ? '' : ' unread'}`;
+    item.innerHTML = `
+      <span class="notif-icon">${typeIcons[n.type] || '🔵'}</span>
+      <div class="notif-content">
+        <div class="notif-title">${n.title}</div>
+        <div class="notif-body">${n.body}</div>
+      </div>
+      ${!n.read ? '<span class="notif-dot"></span>' : ''}
+    `;
+    // Clicking marks it as read
+    item.addEventListener('click', () => {
+      const all = _loadNotifs();
+      const idx = all.findIndex(x => x.id === n.id);
+      if (idx !== -1) { all[idx].read = true; _saveNotifs(all); renderNotifPanel(); }
+    });
+    listEl.appendChild(item);
+  });
+}
+
+function toggleNotifPanel() {
+  const panel   = document.getElementById('notif-panel');
+  const overlay = document.getElementById('notif-overlay');
+  if (!panel) return;
+  const isHidden = panel.classList.contains('hidden');
+  if (isHidden) {
+    panel.classList.remove('hidden');
+    if (overlay) overlay.classList.remove('hidden');
+    renderNotifPanel();
+  } else {
+    closeNotifPanel();
+  }
+}
+
+function closeNotifPanel() {
+  document.getElementById('notif-panel')?.classList.add('hidden');
+  document.getElementById('notif-overlay')?.classList.add('hidden');
+}
+
+function markAllNotifsRead() {
+  const all = _loadNotifs().map(n => ({ ...n, read: true }));
+  _saveNotifs(all);
+  renderNotifPanel();
+}
+
+function clearAllNotifs() {
+  _saveNotifs([]);
+  renderNotifPanel();
 }
 
 // NOTE: Auto-login on page load is handled in auth.js (DOMContentLoaded listener).
