@@ -24,9 +24,9 @@
 <!-- ===================== PWA INSTALL BANNER ===================== -->
 <div id="pwa-banner" class="pwa-banner hidden">
   <div class="pwa-banner-left">
-    <img src="assets/icons/icon-72.png" alt="BudgetWise" class="pwa-banner-icon"/>
+    <img src="assets/icons/icon-72.png" alt="Expense Tracker" class="pwa-banner-icon"/>
     <div>
-      <div class="pwa-banner-title">Install BudgetWise</div>
+      <div class="pwa-banner-title">Install Expense Tracker</div>
       <div class="pwa-banner-sub">Add to your home screen for quick access</div>
     </div>
   </div>
@@ -43,12 +43,7 @@
 <!-- ===================== AUTH SCREEN ===================== -->
 <div id="auth-screen" class="auth-screen">
   <div class="auth-brand">
-    <div class="brand-logo">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="12" cy="12" r="9"/>
-        <polyline points="7 14.5 10.5 11 13 13.5 17 9"/>
-      </svg>
-    </div>
+    <img src="assets/images/logo-mark.svg" alt="BudgetWise" class="auth-logo-img"/>
     <h1>BudgetWise</h1>
     <p>Track. Plan. Thrive.</p>
   </div>
@@ -114,13 +109,11 @@
 
     <!-- Brand -->
     <div class="sidebar-brand">
-      <div class="brand-logo">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="9"/>
-          <polyline points="7 14.5 10.5 11 13 13.5 17 9"/>
-        </svg>
+      <img src="assets/images/logo-mark.svg" alt="BudgetWise" class="sidebar-logo-mark"/>
+      <div class="sidebar-brand-text">
+        <span class="sidebar-brand-name">BudgetWise</span>
+        <span class="sidebar-brand-sub">EXPENSE TRACKER</span>
       </div>
-      <span>BudgetWise</span>
     </div>
 
     <!-- User profile card -->
@@ -800,6 +793,43 @@
           <h4>Daily Spending — This Month</h4>
           <canvas id="dailyChart" height="200"></canvas>
         </div>
+
+        <!-- Spending Calendar -->
+        <div class="chart-card wide spending-cal-card">
+          <div class="spending-cal-header">
+            <button class="cal-nav-btn" onclick="calShift(-1)" aria-label="Previous month">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            </button>
+            <div>
+              <h4 id="cal-title" style="margin:0">Spending Calendar</h4>
+              <p id="cal-subtitle" class="sub" style="margin:0;font-size:12px"></p>
+            </div>
+            <button class="cal-nav-btn" onclick="calShift(1)" aria-label="Next month">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </button>
+          </div>
+
+          <div class="cal-legend">
+            <span class="cal-legend-item"><span class="cal-swatch no-spend"></span>No spend</span>
+            <span class="cal-legend-item"><span class="cal-swatch low-spend"></span>Low</span>
+            <span class="cal-legend-item"><span class="cal-swatch mid-spend"></span>Moderate</span>
+            <span class="cal-legend-item"><span class="cal-swatch high-spend"></span>High</span>
+          </div>
+
+          <div class="cal-dow-row">
+            <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+          </div>
+          <div class="cal-grid" id="cal-grid"></div>
+
+          <!-- Day detail panel -->
+          <div class="cal-detail hidden" id="cal-detail">
+            <div class="cal-detail-header">
+              <span id="cal-detail-date"></span>
+              <button class="cal-detail-close" onclick="closeCalDetail()">✕</button>
+            </div>
+            <div id="cal-detail-list"></div>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -1096,17 +1126,17 @@
               </div>
               <div>
                 <div class="settings-card-title">Install App</div>
-                <div class="settings-card-sub">Add BudgetWise to your device</div>
+                <div class="settings-card-sub">Add Expense Tracker to your device</div>
               </div>
             </div>
-            <p class="settings-hint">Install BudgetWise as an app for quick access from your home screen or taskbar. You can also tap the install icon in your browser's address bar.</p>
+            <p class="settings-hint">Install Expense Tracker as an app for quick access from your home screen or taskbar. You can also tap the install icon in your browser's address bar.</p>
             <button class="btn-primary" id="pwa-install-settings-btn" onclick="installPWA()">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
                 <polyline points="7 10 12 15 17 10"/>
                 <line x1="12" y1="15" x2="12" y2="3"/>
               </svg>
-              Install BudgetWise
+              Install Expense Tracker
             </button>
           </div>
 
@@ -1155,7 +1185,7 @@
               </div>
             </div>
             <div class="demo-loader-body">
-              <p class="demo-loader-desc">Loads 4 months of transactions, budgets, and goals so every feature of BudgetWise is showcased — perfect for presentations and demos.</p>
+              <p class="demo-loader-desc">Loads 4 months of transactions, budgets, and goals so every feature of Expense Tracker is showcased — perfect for presentations and demos.</p>
               <div class="demo-loader-pills">
                 <span class="demo-pill">📊 48 transactions</span>
                 <span class="demo-pill">💰 6 budgets</span>
@@ -1620,7 +1650,7 @@
     _deferredPrompt = null;
     const settingsBtn = document.getElementById('pwa-install-settings-btn');
     if (settingsBtn) settingsBtn.classList.add('hidden');
-    if (typeof showToast === 'function') showToast('BudgetWise is now installed on your device.', 'success');
+    if (typeof showToast === 'function') showToast('Expense Tracker is now installed on your device.', 'success');
   });
 
   function installPWA() {

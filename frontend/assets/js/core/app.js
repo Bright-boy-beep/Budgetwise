@@ -111,6 +111,9 @@ function renderPage(page) {
       break;
     case 'analytics':
       renderAnalyticsCharts();
+      _calYear  = new Date().getFullYear();
+      _calMonth = new Date().getMonth();
+      renderSpendingCalendar();
       break;
     case 'ml-insights':
       renderMLInsights();
@@ -317,9 +320,9 @@ async function importData(event) {
     return;
   }
 
-  // Validate it's a BudgetWise export
+  // Validate it's a Expense Tracker export
   if (!data.transactions && !data.budgets) {
-    showToast('This doesn\'t look like a BudgetWise backup file.', 'error');
+    showToast('This doesn\'t look like a Expense Tracker backup file.', 'error');
     return;
   }
 

@@ -1,0 +1,31 @@
+<svg viewBox="0 0 100 82" xmlns="http://www.w3.org/2000/svg">
+
+  <!-- Back bill -->
+  <g transform="rotate(-22, 36, 52)">
+    <rect x="4" y="36" width="48" height="30" rx="4" fill="#0a0a0a"/>
+  </g>
+
+  <!-- Middle bill -->
+  <g transform="rotate(-11, 36, 50)">
+    <rect x="2" y="33" width="50" height="30" rx="4" fill="#2c2c2c"/>
+  </g>
+
+  <!-- Top bill — green -->
+  <rect x="0" y="29" width="54" height="32" rx="4" fill="#27A827"/>
+  <ellipse cx="27" cy="45" rx="10" ry="8" fill="rgba(255,255,255,0.13)"/>
+  <text x="27" y="51"
+        font-size="18" font-weight="900"
+        font-family="Arial Black, Arial, sans-serif"
+        fill="white" text-anchor="middle">$</text>
+
+  <!-- Human figure -->
+  <circle cx="78" cy="14" r="10" fill="#0d0d0d"/>
+  <path d="M 67 44 C 63 34 65 25 78 22 C 91 25 93 34 89 44 Z" fill="#0d0d0d"/>
+  <!-- Left arm -->
+  <path d="M 68 39 Q 56 28 50 16"
+        stroke="#0d0d0d" stroke-width="8" stroke-linecap="round" fill="none"/>
+  <!-- Right arm -->
+  <path d="M 88 39 Q 100 28 98 16"
+        stroke="#0d0d0d" stroke-width="8" stroke-linecap="round" fill="none"/>
+
+</svg>
