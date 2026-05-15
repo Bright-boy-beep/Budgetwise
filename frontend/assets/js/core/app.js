@@ -107,6 +107,7 @@ function renderPage(page) {
       renderAllTransactions();
       break;
     case 'budgets':
+      switchBudgetTab('current');
       renderBudgets();
       break;
     case 'analytics':

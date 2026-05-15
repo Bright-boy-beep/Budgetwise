@@ -3176,6 +3176,114 @@ body.dark .cal-cell.high-spend { background: rgba(220,38,38,0.18); }
 }
 
 /* ============================================================
+   BUDGET HISTORY
+   ============================================================ */
+
+/* Tab switcher */
+.budget-tabs {
+  display: flex;
+  gap: 4px;
+  background: var(--bg-input);
+  border-radius: 10px;
+  padding: 4px;
+  width: fit-content;
+  margin-bottom: 20px;
+  border: 1px solid var(--border);
+}
+.budget-tab {
+  padding: 7px 20px;
+  border-radius: 7px;
+  border: none;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.budget-tab.active {
+  background: var(--bg-surface);
+  color: var(--accent);
+  font-weight: 600;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+}
+.budget-tab:hover:not(.active) { color: var(--text-secondary); }
+
+/* History card */
+.bh-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  margin-bottom: 12px;
+  overflow: hidden;
+  transition: box-shadow 0.15s;
+}
+.bh-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.07); }
+
+.bh-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  cursor: pointer;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.bh-card-left  { display: flex; flex-direction: column; gap: 3px; }
+.bh-card-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; flex-wrap: wrap; }
+
+.bh-month-label { font-size: 15px; font-weight: 700; color: var(--text-primary); }
+.bh-meta        { font-size: 12px; color: var(--text-muted); }
+
+.bh-score-badge {
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+.bh-score-green { background: rgba(21,128,61,0.12);  color: #15803d; }
+.bh-score-amber { background: rgba(217,119,6,0.12);  color: #b45309; }
+.bh-score-red   { background: rgba(185,28,28,0.12);  color: #b91c1c; }
+
+.bh-net         { font-size: 12px; font-weight: 600; white-space: nowrap; }
+.bh-net-saved   { color: #15803d; }
+.bh-net-over    { color: #b91c1c; }
+
+.bh-chevron { color: var(--text-muted); flex-shrink: 0; transition: transform 0.2s; }
+
+/* History card body */
+.bh-card-body {
+  border-top: 1px solid var(--border);
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.bh-row {}
+.bh-row-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.bh-cat-name   { font-size: 13px; font-weight: 500; color: var(--text-primary); }
+.bh-cat-status { font-size: 12px; font-weight: 600; }
+.bh-ok   { color: #15803d; }
+.bh-over { color: #b91c1c; }
+
+.bh-bar-track {
+  height: 6px;
+  background: var(--bg-input);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 5px;
+}
+.bh-bar-fill  { height: 100%; border-radius: 3px; transition: width 0.4s ease; }
+.bh-row-sub   { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted); }
+
+/* ============================================================
    SAVINGS GOALS PAGE
    ============================================================ */
 

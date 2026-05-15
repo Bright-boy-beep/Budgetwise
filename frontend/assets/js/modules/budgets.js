@@ -129,6 +129,129 @@ function renderBudgetCard(b) {
   return div;
 }
 
+// ── Budget tab switching ──────────────────────────────────────────────────
+
+function switchBudgetTab(tab) {
+  const isHistory = tab === 'history';
+  document.getElementById('budget-current-view').classList.toggle('hidden', isHistory);
+  document.getElementById('budget-history-view').classList.toggle('hidden', !isHistory);
+  document.getElementById('btab-current').classList.toggle('active', !isHistory);
+  document.getElementById('btab-history').classList.toggle('active', isHistory);
+  if (isHistory) renderBudgetHistory();
+}
+
+// ── Budget history view ───────────────────────────────────────────────────
+
+function renderBudgetHistory() {
+  const budgets  = DB.getBudgets();
+  const txs      = DB.getTransactions();
+  const settings = DB.getSettings();
+  const curr     = settings.currency || '₦';
+
+  const listEl  = document.getElementById('budget-history-list');
+  const emptyEl = document.getElementById('budget-history-empty');
+  if (!listEl) return;
+
+  const now         = new Date();
+  const curMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+  // Get all past months that have budgets (exclude current month)
+  const pastMonths = [...new Set(budgets.map(b => b.month))]
+    .filter(m => m < curMonthStr)
+    .sort((a, b) => b.localeCompare(a)); // newest first
+
+  listEl.innerHTML = '';
+
+  if (pastMonths.length === 0) {
+    emptyEl.classList.remove('hidden');
+    return;
+  }
+  emptyEl.classList.add('hidden');
+
+  pastMonths.forEach(monthStr => {
+    const [y, m]     = monthStr.split('-').map(Number);
+    const monthLabel = new Date(y, m - 1).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+    const monthBudgets = budgets.filter(b => b.month === monthStr);
+    const monthTxs     = txs.filter(t => t.date.startsWith(monthStr) && t.type === 'expense');
+
+    // Per-category actuals
+    const byCategory = {};
+    monthTxs.forEach(t => { byCategory[t.category] = (byCategory[t.category] || 0) + t.amount; });
+
+    // Score: how many categories were on track
+    const onTrack  = monthBudgets.filter(b => (byCategory[b.category] || 0) <= b.limit);
+    const overBudget = monthBudgets.filter(b => (byCategory[b.category] || 0) > b.limit);
+    const score    = monthBudgets.length > 0 ? Math.round((onTrack.length / monthBudgets.length) * 100) : 0;
+
+    // Total budgeted vs total spent
+    const totalBudgeted = monthBudgets.reduce((s, b) => s + b.limit, 0);
+    const totalSpent    = monthBudgets.reduce((s, b) => s + (byCategory[b.category] || 0), 0);
+    const netSaved      = totalBudgeted - totalSpent;
+
+    // Colour badge for score
+    const scoreColor = score === 100 ? 'bh-score-green' : score >= 60 ? 'bh-score-amber' : 'bh-score-red';
+    const scoreLabel = score === 100 ? 'All on track' : score >= 60 ? 'Mostly on track' : 'Over budget';
+
+    // Unique card ID for expand/collapse
+    const cardId = `bh-${monthStr}`;
+
+    const card = document.createElement('div');
+    card.className = 'bh-card';
+    card.innerHTML = `
+      <div class="bh-card-header" onclick="toggleBhCard('${cardId}')">
+        <div class="bh-card-left">
+          <div class="bh-month-label">${monthLabel}</div>
+          <div class="bh-meta">${monthBudgets.length} budget${monthBudgets.length !== 1 ? 's' : ''} &middot; ${curr}${Math.round(totalSpent).toLocaleString()} of ${curr}${Math.round(totalBudgeted).toLocaleString()} used</div>
+        </div>
+        <div class="bh-card-right">
+          <span class="bh-score-badge ${scoreColor}">${scoreLabel}</span>
+          <span class="bh-net ${netSaved >= 0 ? 'bh-net-saved' : 'bh-net-over'}">
+            ${netSaved >= 0 ? 'Saved ' + curr + Math.round(netSaved).toLocaleString() : 'Over by ' + curr + Math.round(Math.abs(netSaved)).toLocaleString()}
+          </span>
+          <svg class="bh-chevron" id="${cardId}-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </div>
+      </div>
+
+      <div class="bh-card-body hidden" id="${cardId}-body">
+        ${monthBudgets.map(b => {
+          const spent   = byCategory[b.category] || 0;
+          const pct     = b.limit > 0 ? Math.min((spent / b.limit) * 100, 100) : 0;
+          const over    = spent > b.limit;
+          const barColor = over ? '#b91c1c' : pct >= 80 ? '#d97706' : '#15803d';
+          return `
+            <div class="bh-row">
+              <div class="bh-row-top">
+                <span class="bh-cat-name">${getCategoryIcon(b.category)} ${b.category}</span>
+                <span class="bh-cat-status ${over ? 'bh-over' : 'bh-ok'}">
+                  ${over ? 'Over by ' + curr + Math.round(spent - b.limit).toLocaleString() : curr + Math.round(b.limit - spent).toLocaleString() + ' saved'}
+                </span>
+              </div>
+              <div class="bh-bar-track">
+                <div class="bh-bar-fill" style="width:${pct.toFixed(1)}%;background:${barColor}"></div>
+              </div>
+              <div class="bh-row-sub">
+                <span>${curr}${Math.round(spent).toLocaleString()} spent</span>
+                <span>${curr}${Math.round(b.limit).toLocaleString()} limit &middot; ${Math.round(pct)}% used</span>
+              </div>
+            </div>`;
+        }).join('')}
+      </div>
+    `;
+
+    listEl.appendChild(card);
+  });
+}
+
+function toggleBhCard(cardId) {
+  const body    = document.getElementById(`${cardId}-body`);
+  const chevron = document.getElementById(`${cardId}-chevron`);
+  if (!body) return;
+  const open = body.classList.toggle('hidden') === false;
+  if (chevron) chevron.style.transform = open ? 'rotate(180deg)' : '';
+}
+
 function renderBudgets() {
   const grid  = document.getElementById('budgets-list');
   const empty = document.getElementById('budgets-empty');

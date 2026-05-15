@@ -726,6 +726,15 @@
         </div>
       </div>
 
+      <!-- Tab switcher -->
+      <div class="budget-tabs">
+        <button class="budget-tab active" id="btab-current" onclick="switchBudgetTab('current')">This Month</button>
+        <button class="budget-tab" id="btab-history" onclick="switchBudgetTab('history')">History</button>
+      </div>
+
+      <!-- ── Current month view ── -->
+      <div id="budget-current-view">
+
       <!-- ML Budget Suggestions Panel -->
       <div id="budget-suggestions-panel" class="bsugg-panel hidden">
         <div class="bsugg-header">
@@ -765,6 +774,24 @@
         <p class="empty-state-sub">Set a monthly limit for any spending category to start tracking.</p>
         <button class="btn-accent sm" onclick="openBudgetModal()" style="margin-top:12px">Add your first budget</button>
       </div>
+
+      </div><!-- /budget-current-view -->
+
+      <!-- ── History view ── -->
+      <div id="budget-history-view" class="hidden">
+        <div id="budget-history-list"></div>
+        <div id="budget-history-empty" class="empty-state hidden">
+          <div class="empty-state-icon">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/>
+              <line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+          </div>
+          <p class="empty-state-title">No budget history yet</p>
+          <p class="empty-state-sub">Set budgets for past months and they'll appear here as a record.</p>
+        </div>
+      </div>
+
     </section>
 
     <!-- ========== ANALYTICS PAGE ========== -->
