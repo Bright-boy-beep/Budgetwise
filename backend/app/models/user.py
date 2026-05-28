@@ -12,7 +12,9 @@ class User(db.Model):
     id         = db.Column(db.Integer, primary_key=True)
     name       = db.Column(db.String(120), nullable=False)
     email      = db.Column(db.String(120), unique=True, nullable=False, index=True)
-    password   = db.Column(db.String(255), nullable=False)       # bcrypt hash
+    password   = db.Column(db.String(255), nullable=True)        # bcrypt hash; NULL for Google-only accounts
+    google_id  = db.Column(db.String(255), unique=True, nullable=True, index=True)  # Google sub claim
+    avatar_url = db.Column(db.String(512), nullable=True)        # Google profile picture
     currency        = db.Column(db.String(10),  default="₦")
     theme           = db.Column(db.String(10),  default="light")
     opening_balance = db.Column(db.Float,       default=0.0)
@@ -27,6 +29,8 @@ class User(db.Model):
             "id":              self.id,
             "name":            self.name,
             "email":           self.email,
+            "avatar_url":      self.avatar_url,
+            "has_password":    self.password is not None,   # lets frontend know if password exists
             "currency":        self.currency,
             "theme":           self.theme,
             "opening_balance": self.opening_balance or 0.0,

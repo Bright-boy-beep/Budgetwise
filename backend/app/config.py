@@ -27,6 +27,9 @@ class Config:
     # JWT settings
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=24)
 
+    # Google OAuth — set GOOGLE_CLIENT_ID in your .env file
+    GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")
+
     # ML model paths
     ML_MODELS_DIR = os.path.join(BASE_DIR, "..", "..", "ml", "saved_models")
 

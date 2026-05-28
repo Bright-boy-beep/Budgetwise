@@ -80,8 +80,29 @@ def create_app(config_class=Config):
             return _jsonify({"error": str(e)}), code
         return _jsonify({"error": f"Server error: {str(e)}"}), 500
 
-    # Create all database tables on first run
+    # Create all database tables on first run, then patch any missing columns
     with app.app_context():
         db.create_all()
+        _migrate_db(db)
 
     return app
+
+
+def _migrate_db(db):
+    """
+    Lightweight migration: add any columns that exist in the model but are
+    missing from the live SQLite database. Safe to run on every startup.
+    """
+    migrations = [
+        ("users", "google_id",  "VARCHAR(255)"),
+        ("users", "avatar_url", "VARCHAR(512)"),
+    ]
+    with db.engine.connect() as conn:
+        from sqlalchemy import text, inspect
+        inspector = inspect(db.engine)
+        for table, column, col_type in migrations:
+            existing = [c["name"] for c in inspector.get_columns(table)]
+            if column not in existing:
+                conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {column} {col_type}"))
+                conn.commit()
+                print(f"[migrate] Added column {table}.{column}")

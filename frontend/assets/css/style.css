@@ -167,6 +167,37 @@ body.dark {
   border-radius: var(--radius-sm);
 }
 
+/* Google Sign-In button container (GSI renders its button inside this) */
+.google-btn-wrap {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  min-height: 44px;
+}
+/* Make the iframe GSI injects fill the full width */
+.google-btn-wrap > div,
+.google-btn-wrap iframe {
+  width: 100% !important;
+  border-radius: var(--radius-sm) !important;
+}
+
+/* Divider between Google and email form */
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+.auth-divider::before,
+.auth-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+.auth-divider span { white-space: nowrap; }
+
 /* ============================================================
    FORM ELEMENTS
    ============================================================ */
@@ -2811,6 +2842,222 @@ body.dark .cal-cell.high-spend { background: rgba(220,38,38,0.18); }
   color: var(--text-muted);
   text-align: center;
   padding: 16px 0 4px;
+}
+
+/* ============================================================
+   SMART FINANCIAL TIPS — UPGRADED INSIGHTS CARD
+   ============================================================ */
+
+/* Header right cluster: badge + refresh + AI label */
+.tips-header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.tips-count-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 20px;
+  background: var(--accent-light);
+  color: var(--accent);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+.tips-count-badge.urgent {
+  background: var(--red-light);
+  color: var(--red);
+}
+
+.tips-refresh-btn {
+  width: 30px;
+  height: 30px;
+  border: none;
+  background: var(--bg-input);
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  transition: background 0.2s, color 0.2s, transform 0.2s;
+  flex-shrink: 0;
+}
+.tips-refresh-btn:hover {
+  background: var(--accent-light);
+  color: var(--accent);
+}
+.tips-refresh-btn.spinning svg {
+  animation: tips-spin 0.7s linear infinite;
+}
+@keyframes tips-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* Individual tip cards */
+.tip-card {
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg-input);
+  padding: 13px 14px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: box-shadow 0.18s;
+}
+.tip-card:hover { box-shadow: var(--shadow); }
+
+.tip-card.good {
+  background: var(--green-light);
+  border-color: rgba(22,163,74,0.22);
+}
+.tip-card.warn {
+  background: #FFFBEB;
+  border-color: rgba(202,138,4,0.25);
+}
+.tip-card.bad {
+  background: var(--red-light);
+  border-color: rgba(220,38,38,0.22);
+}
+.tip-card.info {
+  background: var(--accent-light);
+  border-color: rgba(123,92,245,0.20);
+}
+
+/* Dark variants */
+.dark .tip-card.good { background: rgba(22,163,74,0.12);  border-color: rgba(22,163,74,0.22); }
+.dark .tip-card.warn { background: rgba(202,138,4,0.12);  border-color: rgba(202,138,4,0.25); }
+.dark .tip-card.bad  { background: rgba(220,38,38,0.12);  border-color: rgba(220,38,38,0.22); }
+.dark .tip-card.info { background: rgba(123,92,245,0.12); border-color: rgba(123,92,245,0.20); }
+
+/* Top row: badge + dismiss */
+.tip-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.tip-badge {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 20px;
+  flex-shrink: 0;
+}
+.tip-badge-alert { background: var(--red-light);   color: var(--red); }
+.tip-badge-warn  { background: #FEF9C3;             color: #92400E; }
+.tip-badge-good  { background: var(--green-light);  color: var(--green); }
+.tip-badge-info  { background: var(--accent-light); color: var(--accent); }
+
+.dark .tip-badge-alert { background: rgba(220,38,38,0.2);  color: #FCA5A5; }
+.dark .tip-badge-warn  { background: rgba(202,138,4,0.2);  color: #FCD34D; }
+.dark .tip-badge-good  { background: rgba(22,163,74,0.2);  color: #6EE7B7; }
+.dark .tip-badge-info  { background: rgba(123,92,245,0.2); color: #C4B5FD; }
+
+.tip-dismiss-btn {
+  width: 22px;
+  height: 22px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  flex-shrink: 0;
+  transition: background 0.15s, color 0.15s;
+}
+.tip-dismiss-btn:hover {
+  background: rgba(220,38,38,0.1);
+  color: var(--red);
+}
+
+.tip-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.4;
+}
+
+.tip-body {
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  line-height: 1.55;
+}
+.tip-body strong { font-weight: 600; color: var(--text-primary); }
+
+.tip-action-btn {
+  align-self: flex-start;
+  margin-top: 2px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+  padding: 0;
+  transition: color 0.15s, gap 0.15s;
+}
+.tip-action-btn:hover { color: var(--accent-dark); text-decoration: underline; }
+
+/* Footer: show-more + clear all */
+.tips-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 4px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.tips-show-more {
+  border: 1px solid var(--border-strong);
+  background: transparent;
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 14px;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: background 0.18s, color 0.18s;
+}
+.tips-show-more:hover {
+  background: var(--accent-light);
+}
+
+.tips-dismiss-all {
+  font-size: 12px;
+  color: var(--text-muted);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: color 0.15s;
+}
+.tips-dismiss-all:hover { color: var(--red); }
+
+/* All-clear / empty state */
+.tips-all-clear {
+  text-align: center;
+  padding: 20px 16px;
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.tips-all-clear strong {
+  display: block;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--green);
+  margin-bottom: 4px;
 }
 
 /* ============================================================

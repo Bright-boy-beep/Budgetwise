@@ -3,17 +3,19 @@ routes/auth.py — Authentication endpoints.
 
 POST /api/auth/register         — create a new user account
 POST /api/auth/login            — authenticate and return a JWT
+POST /api/auth/google           — sign in / register via Google ID token
 GET  /api/auth/me               — return the current user's profile (protected)
 PUT  /api/auth/me               — update profile/preferences (protected)
 PUT  /api/auth/change-password  — change account password (protected)
 """
 
 import bcrypt
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 
 from .. import db
 from ..models.user import User
+from ..services.auth_service import AuthService
 
 auth_bp = Blueprint("auth", __name__)
 
@@ -56,9 +58,68 @@ def login():
         return jsonify({"error": "All fields are required."}), 400
 
     user = User.query.filter_by(email=email).first()
-    if not user or not bcrypt.checkpw(password.encode(), user.password.encode()):
+    if not user or not user.password:
+        # No account, or account was created via Google (no password set)
+        return jsonify({"error": "Incorrect email or password."}), 401
+    if not bcrypt.checkpw(password.encode(), user.password.encode()):
         return jsonify({"error": "Incorrect email or password."}), 401
 
+    token = create_access_token(identity=str(user.id))
+    return jsonify({"token": token, "user": user.to_dict()}), 200
+
+
+@auth_bp.get("/google-client-id")
+def google_client_id():
+    """Return the Google OAuth client ID so the frontend can initialise GSI."""
+    client_id = current_app.config.get("GOOGLE_CLIENT_ID", "")
+    if not client_id:
+        return jsonify({"error": "Google Sign-In not configured."}), 404
+    return jsonify({"client_id": client_id}), 200
+
+
+@auth_bp.post("/google")
+def google_auth():
+    """
+    Verify a Google Identity Services ID token by calling Google's tokeninfo
+    endpoint — no extra libraries required.
+    Body: { "credential": "<google-id-token>" }
+    """
+    import urllib.request
+    import urllib.parse
+    import json as _json
+
+    data       = request.get_json(force=True, silent=True) or {}
+    credential = (data.get("credential") or "").strip()
+
+    if not credential:
+        return jsonify({"error": "Missing Google credential."}), 400
+
+    client_id = current_app.config.get("GOOGLE_CLIENT_ID", "")
+    if not client_id:
+        return jsonify({"error": "Google Sign-In is not configured on this server."}), 500
+
+    # Verify the ID token via Google's tokeninfo endpoint (no library needed)
+    try:
+        url      = f"https://oauth2.googleapis.com/tokeninfo?id_token={urllib.parse.quote(credential)}"
+        req      = urllib.request.Request(url)
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            id_info = _json.loads(resp.read().decode())
+    except Exception as e:
+        return jsonify({"error": f"Could not verify Google token: {str(e)}"}), 401
+
+    # Confirm the token was issued for our app
+    if id_info.get("aud") != client_id:
+        return jsonify({"error": "Token audience mismatch."}), 401
+
+    google_id  = id_info.get("sub", "")
+    email      = id_info.get("email", "")
+    name       = id_info.get("name") or (email.split("@")[0] if email else "User")
+    avatar_url = id_info.get("picture")
+
+    if not google_id or not email:
+        return jsonify({"error": "Incomplete profile returned by Google."}), 400
+
+    user  = AuthService.get_or_create_google_user(google_id, email, name, avatar_url)
     token = create_access_token(identity=str(user.id))
     return jsonify({"token": token, "user": user.to_dict()}), 200
 

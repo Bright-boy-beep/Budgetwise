@@ -1,8 +1,83 @@
 // ============================================================
-// AUTH MODULE — Login, Register, Logout
+// AUTH MODULE — Login, Register, Logout, Google OAuth
 // All calls go to the Flask API. JWT token is stored in
 // localStorage under the key 'bw_token'.
 // ============================================================
+
+// ── Google Sign-In ───────────────────────────────────────────
+//
+// Uses Google Identity Services (GSI) renderButton() — the most reliable
+// approach for button-triggered sign-in. GSI calls window.onGoogleLibraryLoad
+// when it's ready, so there are no timing issues with async script loading.
+
+let _googleClientId = null;
+
+// GSI calls this automatically as soon as its script finishes loading.
+// We fetch the client ID, then render Google's button into both form containers.
+window.onGoogleLibraryLoad = async function () {
+  try {
+    const res = await fetch('/api/auth/google-client-id');
+    if (!res.ok) return;   // Google Sign-In not configured on this server
+    const data = await res.json();
+    if (!data.client_id) return;
+
+    _googleClientId = data.client_id;
+
+    // Initialise GSI with our credential callback
+    google.accounts.id.initialize({
+      client_id: _googleClientId,
+      callback:  handleGoogleCredential,
+      auto_select: false,
+      cancel_on_tap_outside: true,
+    });
+
+    // Render Google's official button into both form containers
+    const btnOptions = {
+      theme: 'outline',
+      size:  'large',
+      text:  'continue_with',
+      shape: 'rectangular',
+      width: 360,          // matches auth card width
+    };
+
+    const loginWrap    = document.getElementById('google-btn-login');
+    const registerWrap = document.getElementById('google-btn-register');
+
+    if (loginWrap) {
+      google.accounts.id.renderButton(loginWrap, btnOptions);
+      loginWrap.classList.remove('hidden');
+    }
+    if (registerWrap) {
+      google.accounts.id.renderButton(registerWrap, btnOptions);
+      registerWrap.classList.remove('hidden');
+    }
+
+    // Show the "or use email" dividers
+    document.querySelectorAll('.auth-divider').forEach(el => el.classList.remove('hidden'));
+
+  } catch (e) {
+    // Google Sign-In unavailable — silently leave button containers hidden
+    console.warn('Google Sign-In init failed:', e);
+  }
+};
+
+// Called by GSI after the user selects their Google account in the popup
+async function handleGoogleCredential(response) {
+  try {
+    const res = await API.post('/auth/google', { credential: response.credential });
+    localStorage.setItem('bw_token', res.token);
+    await DB.loadAll();
+    launchApp(DB.getSession());
+  } catch (e) {
+    const msg = e.message || 'Google Sign-In failed. Please try again.';
+    // Show error on whichever tab is currently visible
+    const loginForm = document.getElementById('login-form');
+    const errEl = loginForm && !loginForm.classList.contains('hidden')
+      ? document.getElementById('login-error')
+      : document.getElementById('reg-error');
+    if (errEl) showAuthError(errEl, msg);
+  }
+}
 
 // ── Tab switching ─────────────────────────────────────────────
 

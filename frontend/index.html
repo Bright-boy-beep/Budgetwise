@@ -18,6 +18,8 @@
   <link rel="apple-touch-icon" href="assets/icons/icon-192.png"/>
   <!-- Stylesheet -->
   <link rel="stylesheet" href="assets/css/style.css"/>
+  <!-- Google Identity Services -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
 
@@ -55,6 +57,10 @@
 
     <!-- Login Form -->
     <div id="login-form" class="auth-form">
+      <!-- Google Sign-In (rendered by GSI library) -->
+      <div id="google-btn-login" class="google-btn-wrap hidden"></div>
+      <div class="auth-divider hidden"><span>or use email</span></div>
+
       <div class="form-group">
         <label>Email</label>
         <input type="email" id="login-email" placeholder="you@example.com"/>
@@ -76,6 +82,10 @@
 
     <!-- Register Form -->
     <div id="register-form" class="auth-form hidden">
+      <!-- Google Sign-Up (rendered by GSI library) -->
+      <div id="google-btn-register" class="google-btn-wrap hidden"></div>
+      <div class="auth-divider hidden"><span>or use email</span></div>
+
       <div class="form-group">
         <label>Full Name</label>
         <input type="text" id="reg-name" placeholder="Your Name"/>
@@ -540,27 +550,40 @@
         </div>
       </div>
 
-      <!-- ── AI Spending Insights Summary ──────────────────────── -->
-      <div class="insights-card" id="insights-card">
+      <!-- ── AI Financial Tips ─────────────────────────────────── -->
+      <div class="insights-card ai-tips-card" id="insights-card">
         <div class="insights-header">
           <div class="insights-header-left">
             <div class="insights-icon">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-                <path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/>
-                <polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+                <path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
               </svg>
             </div>
             <div>
-              <div class="insights-title">Monthly Spending Insights</div>
-              <div class="insights-sub" id="insights-period">Based on this month's activity</div>
+              <div class="insights-title">Smart Financial Tips</div>
+              <div class="insights-sub" id="insights-period">Personalised from your data</div>
             </div>
           </div>
-          <span class="insights-ai-badge">✦ AI</span>
+          <div class="tips-header-right">
+            <span class="tips-count-badge" id="tips-count-badge"></span>
+            <button class="tips-refresh-btn" onclick="refreshTips()" title="Refresh tips" id="tips-refresh-btn">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+                <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/>
+              </svg>
+            </button>
+            <span class="insights-ai-badge">✦ AI</span>
+          </div>
         </div>
         <div class="insights-body" id="insights-body"></div>
         <div class="insights-empty hidden" id="insights-empty">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" style="color:var(--text-muted)"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>
-          <p>Add a few transactions this month and your insights will appear here.</p>
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" style="color:var(--text-muted)">
+            <path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+          </svg>
+          <p>Add a few transactions this month and your personalised tips will appear here.</p>
+        </div>
+        <div class="tips-footer" id="tips-footer" style="display:none">
+          <button class="tips-show-more" id="tips-show-more" onclick="showMoreTips()">Show more tips</button>
+          <span class="tips-dismiss-all" onclick="dismissAllTips()">Clear all</span>
         </div>
       </div>
 

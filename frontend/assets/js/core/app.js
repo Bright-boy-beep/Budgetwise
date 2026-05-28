@@ -748,138 +748,456 @@ function _fcSet(id, text) {
 
 // ---- AI Spending Insights Summary ----
 
-function renderInsightsCard() {
-  const txs      = DB.getTransactions();
-  const budgets  = DB.getBudgets();
-  const settings = DB.getSettings();
+// ============================================================
+// AI FINANCIAL TIPS ENGINE
+// ============================================================
+
+let _allTips      = [];   // full generated list
+let _tipShowCount = 4;    // how many are visible
+
+function _fmt(n) { return Math.round(n).toLocaleString(); }
+
+function _generateTips(txs, budgets, goals, settings) {
   const curr     = settings.currency || '₦';
   const now      = new Date();
-
-  const bodyEl  = document.getElementById('insights-body');
-  const emptyEl = document.getElementById('insights-empty');
-  const subEl   = document.getElementById('insights-period');
-  if (!bodyEl) return;
-
-  const monthName = now.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
-  if (subEl) subEl.textContent = `${monthName} — AI generated`;
+  const tips     = [];
 
   const curMonth  = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   const prevDate  = new Date(now.getFullYear(), now.getMonth() - 1, 1);
   const lastMonth = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
+  const prev2Date = new Date(now.getFullYear(), now.getMonth() - 2, 1);
+  const prev2Month = `${prev2Date.getFullYear()}-${String(prev2Date.getMonth() + 1).padStart(2, '0')}`;
 
-  const curTxs   = txs.filter(t => t.date.startsWith(curMonth));
-  const lastTxs  = txs.filter(t => t.date.startsWith(lastMonth));
+  const curTxs    = txs.filter(t => t.date.startsWith(curMonth));
+  const lastTxs   = txs.filter(t => t.date.startsWith(lastMonth));
+  const prev2Txs  = txs.filter(t => t.date.startsWith(prev2Month));
 
   const curExpense  = curTxs.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
   const curIncome   = curTxs.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
   const lastExpense = lastTxs.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
 
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const dayOfMonth  = now.getDate();
+  const daysLeft    = daysInMonth - dayOfMonth;
+  const lastMonthName  = prevDate.toLocaleDateString('en-GB', { month: 'long' });
+
+  // ─ helper to build category spend map ─────────────────────
+  function catMap(txList) {
+    const m = {};
+    txList.filter(t => t.type === 'expense').forEach(t => {
+      m[t.category] = (m[t.category] || 0) + t.amount;
+    });
+    return m;
+  }
+  const curCatMap   = catMap(curTxs);
+  const lastCatMap  = catMap(lastTxs);
+  const prev2CatMap = catMap(prev2Txs);
+  const curBudgets  = budgets.filter(b => b.month === curMonth);
+
+  // ─── TIP 1: ANOMALY ALERT (priority 1) ───────────────────
+  const anomalies = curTxs.filter(t => t.is_anomaly);
+  if (anomalies.length > 0) {
+    const topAnomaly = anomalies.sort((a, b) => b.amount - a.amount)[0];
+    tips.push({
+      id:       'anomaly-alert',
+      priority: 1,
+      type:     'alert',
+      badge:    '🚨 ALERT',
+      title:    `${anomalies.length} unusual transaction${anomalies.length > 1 ? 's' : ''} detected`,
+      body:     `Our ML model flagged <strong>${anomalies.length} transaction${anomalies.length > 1 ? 's' : ''}</strong> as unusually large this month. The biggest is <strong>${curr}${_fmt(topAnomaly.amount)}</strong> on "${topAnomaly.description}". Verify these are correct to avoid tracking errors.`,
+      action:   { label: 'Review in ML Insights', page: 'ml-insights' },
+    });
+  }
+
+  // ─── TIP 2: OVER BUDGET (priority 1 each) ────────────────
+  curBudgets.forEach(b => {
+    const spent = curCatMap[b.category] || 0;
+    if (spent > b.limit) {
+      const over   = spent - b.limit;
+      const pct    = Math.round((spent / b.limit) * 100);
+      tips.push({
+        id:       `over-budget-${b.category}`,
+        priority: 1,
+        type:     'alert',
+        badge:    '📛 BUDGET',
+        title:    `Over budget on ${b.category} (${pct}%)`,
+        body:     `You've spent <strong>${curr}${_fmt(spent)}</strong> on ${b.category} but your limit is <strong>${curr}${_fmt(b.limit)}</strong> — that's <strong>${curr}${_fmt(over)}</strong> over. Pause non-essential ${b.category} spending for the rest of the month.`,
+        action:   { label: 'View Budgets', page: 'budgets' },
+      });
+    }
+  });
+
+  // ─── TIP 3: SPENDING DEFICIT (priority 1) ────────────────
+  if (curIncome > 0 && curExpense > curIncome) {
+    const deficit = curExpense - curIncome;
+    tips.push({
+      id:       'spending-deficit',
+      priority: 1,
+      type:     'alert',
+      badge:    '🔴 SAVINGS',
+      title:    `You're spending more than you earn`,
+      body:     `Your expenses (<strong>${curr}${_fmt(curExpense)}</strong>) exceed your recorded income (<strong>${curr}${_fmt(curIncome)}</strong>) by <strong>${curr}${_fmt(deficit)}</strong> this month. Review non-essentials immediately to avoid debt.`,
+      action:   { label: 'Review Transactions', page: 'transactions' },
+    });
+  }
+
+  // ─── TIP 4: NEAR BUDGET LIMIT (priority 2) ───────────────
+  curBudgets.forEach(b => {
+    const spent = curCatMap[b.category] || 0;
+    const pct   = spent / b.limit;
+    if (pct >= 0.80 && pct <= 1.0) {
+      const remaining  = b.limit - spent;
+      const dailyAllow = daysLeft > 0 ? remaining / daysLeft : 0;
+      tips.push({
+        id:       `near-budget-${b.category}`,
+        priority: 2,
+        type:     'warn',
+        badge:    '⚠️ BUDGET',
+        title:    `${b.category} budget ${Math.round(pct * 100)}% used`,
+        body:     `You have <strong>${curr}${_fmt(remaining)}</strong> left in your ${b.category} budget with <strong>${daysLeft} day${daysLeft !== 1 ? 's' : ''}</strong> to go. That's roughly <strong>${curr}${_fmt(dailyAllow)}/day</strong> — spend carefully to stay within your limit.`,
+        action:   { label: 'View Budgets', page: 'budgets' },
+      });
+    }
+  });
+
+  // ─── TIP 5: LOW SAVINGS RATE (priority 2) ────────────────
+  if (curIncome > 0 && curExpense <= curIncome) {
+    const savings = curIncome - curExpense;
+    const rate    = (savings / curIncome) * 100;
+    if (rate >= 20) {
+      tips.push({
+        id:       'savings-great',
+        priority: 3,
+        type:     'good',
+        badge:    '💰 SAVINGS',
+        title:    `Excellent savings rate: ${rate.toFixed(0)}%`,
+        body:     `You've saved <strong>${curr}${_fmt(savings)}</strong> this month — <strong>${rate.toFixed(0)}%</strong> of your income. Financial experts recommend 20%+ and you're hitting that target. Keep it up!`,
+        action:   { label: 'View Goals', page: 'goals' },
+      });
+    } else if (rate >= 10) {
+      // find top spending category as actionable lever
+      const topCat = Object.entries(curCatMap).sort((a, b) => b[1] - a[1])[0];
+      const potential = topCat ? Math.round(topCat[1] * 0.1) : 0;
+      const newRate   = curIncome > 0 ? ((savings + potential) / curIncome * 100).toFixed(0) : 0;
+      tips.push({
+        id:       'savings-low',
+        priority: 2,
+        type:     'warn',
+        badge:    '💸 SAVINGS',
+        title:    `Savings rate is ${rate.toFixed(0)}% — room to grow`,
+        body:     `You're saving <strong>${curr}${_fmt(savings)}</strong> (${rate.toFixed(0)}% of income). Cutting just 10% of ${topCat ? topCat[0] : 'your top category'} spending (~<strong>${curr}${_fmt(potential)}</strong>) could bring your savings rate up to <strong>${newRate}%</strong>.`,
+        action:   { label: 'See Spending', page: 'analytics' },
+      });
+    } else {
+      tips.push({
+        id:       'savings-very-low',
+        priority: 2,
+        type:     'warn',
+        badge:    '💸 SAVINGS',
+        title:    `Savings rate critically low (${rate.toFixed(0)}%)`,
+        body:     `You've only saved <strong>${curr}${_fmt(savings)}</strong> this month — just ${rate.toFixed(0)}% of income. Aim for at least 20%. Review your discretionary categories (Entertainment, Shopping, Dining) to find cuts.`,
+        action:   { label: 'Review Categories', page: 'analytics' },
+      });
+    }
+  }
+
+  // ─── TIP 6: SPENDING PACE PROJECTION (priority 2) ────────
+  if (dayOfMonth > 4 && curExpense > 0) {
+    const projected  = (curExpense / dayOfMonth) * daysInMonth;
+    const pctElapsed = dayOfMonth / daysInMonth;
+    if (lastExpense > 0) {
+      const overPace = projected > lastExpense * 1.25;
+      const underPace = projected < lastExpense * 0.85;
+      if (overPace) {
+        const excess = projected - lastExpense;
+        tips.push({
+          id:       'pace-fast',
+          priority: 2,
+          type:     'warn',
+          badge:    '📈 TREND',
+          title:    `On pace to exceed last month by ${Math.round(((projected - lastExpense) / lastExpense) * 100)}%`,
+          body:     `You've spent <strong>${curr}${_fmt(curExpense)}</strong> in ${dayOfMonth} days. Projected month-end total: <strong>${curr}${_fmt(projected)}</strong> — that's <strong>${curr}${_fmt(excess)}</strong> more than ${lastMonthName}. Slow down to course-correct.`,
+          action:   { label: 'Check Transactions', page: 'transactions' },
+        });
+      } else if (underPace) {
+        tips.push({
+          id:       'pace-good',
+          priority: 3,
+          type:     'good',
+          badge:    '📉 TREND',
+          title:    `Great pace — projected spend below last month`,
+          body:     `At your current rate, you'll spend ~<strong>${curr}${_fmt(projected)}</strong> by month-end — <strong>less</strong> than ${lastMonthName}'s <strong>${curr}${_fmt(lastExpense)}</strong>. You're trending in the right direction!`,
+          action:   null,
+        });
+      }
+    }
+  }
+
+  // ─── TIP 7: 3-MONTH RISING CATEGORY (priority 2) ─────────
+  Object.keys(curCatMap).forEach(cat => {
+    const c0 = prev2CatMap[cat] || 0;
+    const c1 = lastCatMap[cat]  || 0;
+    const c2 = curCatMap[cat]   || 0;
+    if (c0 > 0 && c1 > c0 * 1.1 && c2 > c1 * 1.1) {
+      const totalRise = ((c2 - c0) / c0 * 100).toFixed(0);
+      tips.push({
+        id:       `rising-cat-${cat}`,
+        priority: 2,
+        type:     'warn',
+        badge:    '📊 TREND',
+        title:    `${cat} spending up 3 months running`,
+        body:     `Your ${cat} expenses have risen consistently: <strong>${curr}${_fmt(c0)}</strong> → <strong>${curr}${_fmt(c1)}</strong> → <strong>${curr}${_fmt(c2)}</strong> — a <strong>${totalRise}% increase</strong> over 3 months. Consider setting a budget limit to contain this trend.`,
+        action:   { label: 'Set a Budget', page: 'budgets' },
+      });
+    }
+  });
+
+  // ─── TIP 8: GOAL PROGRESS (priority 2-3) ─────────────────
+  if (goals && goals.length > 0) {
+    goals.forEach(g => {
+      if (!g.target || !g.saved) return;
+      const pct  = (g.saved / g.target) * 100;
+      const left = g.target - g.saved;
+      if (pct >= 100) {
+        tips.push({
+          id:       `goal-done-${g.id}`,
+          priority: 3,
+          type:     'good',
+          badge:    '🎯 GOAL',
+          title:    `Goal achieved: ${g.name}!`,
+          body:     `You've reached your <strong>${g.name}</strong> savings goal of <strong>${curr}${_fmt(g.target)}</strong>! Congratulations — consider setting your next challenge or moving the funds to your account.`,
+          action:   { label: 'View Goals', page: 'goals' },
+        });
+      } else if (pct >= 75) {
+        tips.push({
+          id:       `goal-near-${g.id}`,
+          priority: 3,
+          type:     'good',
+          badge:    '🎯 GOAL',
+          title:    `${g.name} is ${pct.toFixed(0)}% funded`,
+          body:     `You're almost there! Just <strong>${curr}${_fmt(left)}</strong> more to hit your <strong>${g.name}</strong> goal of <strong>${curr}${_fmt(g.target)}</strong>. A little extra discipline this month could finish it off.`,
+          action:   { label: 'View Goals', page: 'goals' },
+        });
+      } else if (pct < 25 && g.target > 0) {
+        const monthlySuggestion = Math.ceil(left / 6);
+        tips.push({
+          id:       `goal-behind-${g.id}`,
+          priority: 3,
+          type:     'info',
+          badge:    '🎯 GOAL',
+          title:    `${g.name} needs attention (${pct.toFixed(0)}% funded)`,
+          body:     `Your <strong>${g.name}</strong> goal is only <strong>${pct.toFixed(0)}%</strong> complete. Setting aside <strong>${curr}${_fmt(monthlySuggestion)}/month</strong> would have you there in about 6 months.`,
+          action:   { label: 'Update Goal', page: 'goals' },
+        });
+      }
+    });
+  }
+
+  // ─── TIP 9: NO BUDGET FOR TOP CATEGORY (priority 3) ──────
+  const budgetedCats = new Set(curBudgets.map(b => b.category));
+  const topUnbudgeted = Object.entries(curCatMap)
+    .filter(([cat]) => !budgetedCats.has(cat) && cat !== 'Income')
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 1);
+  if (topUnbudgeted.length > 0) {
+    const [cat, amt] = topUnbudgeted[0];
+    tips.push({
+      id:       `no-budget-${cat}`,
+      priority: 3,
+      type:     'info',
+      badge:    '💡 TIP',
+      title:    `No budget set for ${cat}`,
+      body:     `You've spent <strong>${curr}${_fmt(amt)}</strong> on ${cat} this month but have no budget limit set for it. Setting a limit helps you spot overspending before it happens. Try capping it at your current spend.`,
+      action:   { label: 'Set Budget', page: 'budgets' },
+    });
+  }
+
+  // ─── TIP 10: SPENDING VS LAST MONTH (priority 3) ─────────
+  if (lastExpense > 0 && curExpense > 0) {
+    const delta    = ((curExpense - lastExpense) / lastExpense) * 100;
+    const absDelta = Math.abs(delta).toFixed(0);
+    if (delta <= -10) {
+      tips.push({
+        id:       'vs-last-month-good',
+        priority: 3,
+        type:     'good',
+        badge:    '📉 TREND',
+        title:    `Spending down ${absDelta}% vs last month`,
+        body:     `You've spent <strong>${curr}${_fmt(curExpense)}</strong> so far this month vs <strong>${curr}${_fmt(lastExpense)}</strong> in ${lastMonthName}. That's a <strong>${absDelta}% reduction</strong> — excellent financial discipline!`,
+        action:   null,
+      });
+    } else if (delta > 30) {
+      tips.push({
+        id:       'vs-last-month-bad',
+        priority: 2,
+        type:     'warn',
+        badge:    '📈 TREND',
+        title:    `Spending up ${absDelta}% vs last month`,
+        body:     `You've spent <strong>${curr}${_fmt(curExpense)}</strong> this month vs <strong>${curr}${_fmt(lastExpense)}</strong> in ${lastMonthName} — an increase of <strong>${absDelta}%</strong>. Identify which categories are driving this rise and set limits.`,
+        action:   { label: 'View Analytics', page: 'analytics' },
+      });
+    }
+  } else if (curTxs.length > 0 && lastExpense === 0) {
+    tips.push({
+      id:       'first-month-tip',
+      priority: 3,
+      type:     'info',
+      badge:    '💡 TIP',
+      title:    `Great start — you're building your baseline`,
+      body:     `This looks like your first full month of tracking. You've recorded <strong>${curr}${_fmt(curExpense)}</strong> in expenses. After two months, BudgetWise can compare your spending and generate much richer insights.`,
+      action:   null,
+    });
+  }
+
+  // ─── TIP 11: ALL BUDGETS UNDER CONTROL (priority 3) ──────
+  if (curBudgets.length >= 2) {
+    const allGood = curBudgets.every(b => (curCatMap[b.category] || 0) <= b.limit);
+    if (allGood) {
+      tips.push({
+        id:       'all-budgets-ok',
+        priority: 3,
+        type:     'good',
+        badge:    '✅ BUDGET',
+        title:    `All ${curBudgets.length} budgets on track`,
+        body:     `You're within your spending limits across all <strong>${curBudgets.length}</strong> budget categories this month. Excellent self-control — keeping this streak going builds long-term financial stability.`,
+        action:   null,
+      });
+    }
+  }
+
+  // Sort by priority then deduplicate by id
+  tips.sort((a, b) => a.priority - b.priority);
+  return tips;
+}
+
+// Dismissed tips stored in localStorage
+function _getDismissedTips() {
+  try { return JSON.parse(localStorage.getItem('bw_dismissed_tips') || '[]'); } catch { return []; }
+}
+function _saveDismissedTips(list) {
+  localStorage.setItem('bw_dismissed_tips', JSON.stringify(list));
+}
+
+function dismissTip(tipId) {
+  const dismissed = _getDismissedTips();
+  if (!dismissed.includes(tipId)) dismissed.push(tipId);
+  _saveDismissedTips(dismissed);
+  renderInsightsCard();
+}
+
+function dismissAllTips() {
+  const dismissed = _getDismissedTips();
+  _allTips.forEach(t => { if (!dismissed.includes(t.id)) dismissed.push(t.id); });
+  _saveDismissedTips(dismissed);
+  renderInsightsCard();
+}
+
+function refreshTips() {
+  // Clear dismissed list and re-render
+  localStorage.removeItem('bw_dismissed_tips');
+  _tipShowCount = 4;
+  const btn = document.getElementById('tips-refresh-btn');
+  if (btn) {
+    btn.style.transform = 'rotate(360deg)';
+    btn.style.transition = 'transform 0.5s ease';
+    setTimeout(() => { btn.style.transform = ''; btn.style.transition = ''; }, 500);
+  }
+  renderInsightsCard();
+}
+
+function showMoreTips() {
+  _tipShowCount += 3;
+  renderInsightsCard();
+}
+
+function _tipTypeClass(type) {
+  return { alert: 'bad', warn: 'warn', good: 'good', info: 'info' }[type] || 'neutral';
+}
+
+function renderInsightsCard() {
+  const txs      = DB.getTransactions();
+  const budgets  = DB.getBudgets();
+  const goals    = DB.getGoals ? DB.getGoals() : [];
+  const settings = DB.getSettings();
+  const curr     = settings.currency || '₦';
+  const now      = new Date();
+
+  const bodyEl   = document.getElementById('insights-body');
+  const emptyEl  = document.getElementById('insights-empty');
+  const subEl    = document.getElementById('insights-period');
+  const footerEl = document.getElementById('tips-footer');
+  const countEl  = document.getElementById('tips-count-badge');
+  if (!bodyEl) return;
+
+  const monthName = now.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+  const curMonth  = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const curTxs    = txs.filter(t => t.date.startsWith(curMonth));
+  if (subEl) subEl.textContent = `${monthName} · personalised`;
+
   if (curTxs.length === 0) {
     bodyEl.innerHTML = '';
-    if (emptyEl) emptyEl.classList.remove('hidden');
+    if (emptyEl)  emptyEl.classList.remove('hidden');
+    if (footerEl) footerEl.style.display = 'none';
+    if (countEl)  countEl.textContent = '';
     return;
   }
   if (emptyEl) emptyEl.classList.add('hidden');
 
-  const insights = [];
+  // Generate all tips
+  _allTips = _generateTips(txs, budgets, goals, settings);
 
-  // ── 1. Spending vs last month ─────────────────────────────
-  if (lastExpense > 0 && curExpense > 0) {
-    const delta = ((curExpense - lastExpense) / lastExpense) * 100;
-    const absDelta = Math.abs(delta).toFixed(0);
-    if (delta <= -10) {
-      insights.push({ type: 'good', icon: '📉', text: `You've spent <strong>${curr}${Math.round(curExpense).toLocaleString()}</strong> this month — that's <strong>${absDelta}% less</strong> than ${prevDate.toLocaleDateString('en-GB', { month: 'long' })}. Great spending discipline!` });
-    } else if (delta < 0) {
-      insights.push({ type: 'good', icon: '↓', text: `Spending is down slightly — <strong>${curr}${Math.round(curExpense).toLocaleString()}</strong> vs <strong>${curr}${Math.round(lastExpense).toLocaleString()}</strong> last month. You're trending in the right direction.` });
-    } else if (delta <= 15) {
-      insights.push({ type: 'neutral', icon: '→', text: `You've spent <strong>${curr}${Math.round(curExpense).toLocaleString()}</strong> this month, roughly on par with ${prevDate.toLocaleDateString('en-GB', { month: 'long' })} (<strong>+${absDelta}%</strong>). Spending is stable.` });
-    } else if (delta <= 35) {
-      insights.push({ type: 'warn', icon: '⚠️', text: `Spending is up <strong>${absDelta}%</strong> compared to last month — <strong>${curr}${Math.round(curExpense).toLocaleString()}</strong> vs <strong>${curr}${Math.round(lastExpense).toLocaleString()}</strong>. Worth reviewing your categories.` });
-    } else {
-      insights.push({ type: 'bad', icon: '🚨', text: `Spending has jumped <strong>${absDelta}%</strong> this month — <strong>${curr}${Math.round(curExpense).toLocaleString()}</strong> vs <strong>${curr}${Math.round(lastExpense).toLocaleString()}</strong> last month. Consider cutting back.` });
-    }
-  } else if (curExpense > 0) {
-    insights.push({ type: 'info', icon: '📊', text: `You've recorded <strong>${curr}${Math.round(curExpense).toLocaleString()}</strong> in expenses this month. Keep tracking to see month-over-month comparisons.` });
+  // Filter out dismissed
+  const dismissed = _getDismissedTips();
+  const visible   = _allTips.filter(t => !dismissed.includes(t.id));
+
+  if (visible.length === 0) {
+    bodyEl.innerHTML = '<div class="tips-all-clear"><span>✨</span><p>You\'re all caught up — no tips right now. Check back after more transactions.</p></div>';
+    if (footerEl) footerEl.style.display = 'none';
+    if (countEl)  countEl.textContent = '';
+    return;
   }
 
-  // ── 2. Top spending category ──────────────────────────────
-  const byCategory = {};
-  curTxs.filter(t => t.type === 'expense').forEach(t => {
-    byCategory[t.category] = (byCategory[t.category] || 0) + t.amount;
-  });
-  const topCats = Object.entries(byCategory).sort((a, b) => b[1] - a[1]);
-  if (topCats.length > 0) {
-    const [topCat, topAmt] = topCats[0];
-    const pct = curExpense > 0 ? Math.round((topAmt / curExpense) * 100) : 0;
-    const icon = getCategoryIcon(topCat);
-    insights.push({ type: 'info', icon, text: `Your biggest spending category is <strong>${topCat}</strong> at <strong>${curr}${Math.round(topAmt).toLocaleString()}</strong>, making up <strong>${pct}%</strong> of total expenses this month.` });
+  // Count badge
+  const urgentCount = visible.filter(t => t.priority === 1).length;
+  if (countEl) {
+    countEl.textContent  = urgentCount > 0 ? `${urgentCount} urgent` : `${visible.length} tips`;
+    countEl.className    = 'tips-count-badge' + (urgentCount > 0 ? ' urgent' : '');
   }
 
-  // ── 3. Savings rate ───────────────────────────────────────
-  if (curIncome > 0) {
-    const savings = curIncome - curExpense;
-    const rate    = (savings / curIncome) * 100;
-    if (rate >= 20) {
-      insights.push({ type: 'good', icon: '💰', text: `Your savings rate is <strong>${rate.toFixed(0)}%</strong> — you've saved <strong>${curr}${Math.max(0, Math.round(savings)).toLocaleString()}</strong> of your <strong>${curr}${Math.round(curIncome).toLocaleString()}</strong> income. Excellent financial health!` });
-    } else if (rate > 0) {
-      insights.push({ type: 'warn', icon: '💸', text: `You've saved <strong>${curr}${Math.round(savings).toLocaleString()}</strong> (<strong>${rate.toFixed(0)}%</strong> of income) this month. Financial experts recommend saving at least 20%.` });
-    } else {
-      insights.push({ type: 'bad', icon: '🔴', text: `You're spending more than you earn this month — <strong>${curr}${Math.round(Math.abs(savings)).toLocaleString()}</strong> over your income. Review your expenses to get back on track.` });
-    }
-  }
-
-  // ── 4. Budget adherence ───────────────────────────────────
-  const curBudgets = budgets.filter(b => b.month === curMonth);
-  if (curBudgets.length > 0) {
-    const overBudget = curBudgets.filter(b => {
-      const spent = curTxs.filter(t => t.type === 'expense' && t.category === b.category)
-                          .reduce((s, t) => s + t.amount, 0);
-      return spent > b.limit;
-    });
-    if (overBudget.length === 0) {
-      insights.push({ type: 'good', icon: '✅', text: `You're within budget on all <strong>${curBudgets.length}</strong> budget categor${curBudgets.length > 1 ? 'ies' : 'y'} this month. Well done!` });
-    } else {
-      const names = overBudget.map(b => b.category).join(', ');
-      insights.push({ type: 'bad', icon: '📛', text: `You've gone over budget in <strong>${overBudget.length}</strong> categor${overBudget.length > 1 ? 'ies' : 'y'}: <strong>${names}</strong>. Consider adjusting your spending or limits.` });
-    }
-  }
-
-  // ── 5. ML forecast pace ───────────────────────────────────
-  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-  const dayOfMonth  = now.getDate();
-  if (dayOfMonth > 3 && curExpense > 0) {
-    const projectedTotal = (curExpense / dayOfMonth) * daysInMonth;
-    const daysLeft       = daysInMonth - dayOfMonth;
-
-    // Compare with last month as a target
-    if (lastExpense > 0) {
-      if (projectedTotal > lastExpense * 1.2) {
-        insights.push({ type: 'warn', icon: '↗', text: `At your current pace, you're projected to spend <strong>${curr}${Math.round(projectedTotal).toLocaleString()}</strong> by month-end — <strong>${Math.round(((projectedTotal - lastExpense) / lastExpense) * 100)}% more</strong> than last month. You have ${daysLeft} days left to course-correct.` });
-      } else if (projectedTotal < lastExpense * 0.9) {
-        insights.push({ type: 'good', icon: '↘', text: `Forecast projects <strong>${curr}${Math.round(projectedTotal).toLocaleString()}</strong> total spend by month-end — <strong>below</strong> last month's <strong>${curr}${Math.round(lastExpense).toLocaleString()}</strong>. You're pacing well.` });
-      }
-    } else {
-      insights.push({ type: 'info', icon: '→', text: `Based on your spending pace so far, you're on track to spend approximately <strong>${curr}${Math.round(projectedTotal).toLocaleString()}</strong> by end of ${monthName.split(' ')[0]}.` });
-    }
-  }
-
-  // ── 6. Anomalies ─────────────────────────────────────────
-  const anomalies = curTxs.filter(t => t.is_anomaly);
-  if (anomalies.length > 0) {
-    insights.push({ type: 'warn', icon: '🔍', text: `The ML model flagged <strong>${anomalies.length} unusual transaction${anomalies.length > 1 ? 's' : ''}</strong> this month. Check the <strong>ML Insights</strong> page for details.` });
-  }
-
-  // ── Render ────────────────────────────────────────────────
+  // Render visible slice
+  const shown = visible.slice(0, _tipShowCount);
   bodyEl.innerHTML = '';
-  insights.slice(0, 5).forEach(ins => {
-    const el = document.createElement('div');
-    el.className = `insight-item ${ins.type}`;
+  shown.forEach(tip => {
+    const cls = _tipTypeClass(tip.type);
+    const el  = document.createElement('div');
+    el.className = `tip-card ${cls}`;
+    el.dataset.tipId = tip.id;
     el.innerHTML = `
-      <span class="insight-icon">${ins.icon}</span>
-      <span class="insight-text">${ins.text}</span>
+      <div class="tip-card-top">
+        <span class="tip-badge tip-badge-${tip.type}">${tip.badge}</span>
+        <button class="tip-dismiss-btn" onclick="dismissTip('${tip.id}')" title="Dismiss this tip">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      <div class="tip-title">${tip.title}</div>
+      <div class="tip-body">${tip.body}</div>
+      ${tip.action ? `<button class="tip-action-btn" onclick="navigate('${tip.action.page}')">${tip.action.label} →</button>` : ''}
     `;
     bodyEl.appendChild(el);
   });
+
+  // Footer
+  if (footerEl) {
+    const hasMore = visible.length > _tipShowCount;
+    footerEl.style.display = (visible.length > 1) ? 'flex' : 'none';
+    const moreBtn = document.getElementById('tips-show-more');
+    if (moreBtn) {
+      moreBtn.style.display = hasMore ? 'inline-flex' : 'none';
+      moreBtn.textContent   = `Show ${Math.min(3, visible.length - _tipShowCount)} more tips`;
+    }
+  }
 }
 
 // ============================================================
