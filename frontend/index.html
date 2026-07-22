@@ -6,7 +6,7 @@
   <title>BudgetWise — Expense Tracker & Budget Planner</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <!-- PWA -->
   <link rel="manifest" href="manifest.json"/>
   <meta name="theme-color" content="#7B5CF5"/>
@@ -1537,27 +1537,6 @@
 <div id="notif-overlay" class="notif-overlay hidden" onclick="closeNotifPanel()"></div>
 
 <!-- ===================== MOBILE BOTTOM NAV ===================== -->
-<nav class="mobile-bottom-nav" id="mobile-bottom-nav">
-  <a class="mbn-item active" id="mbn-dashboard" onclick="navigate('dashboard');mbnSetActive('dashboard')">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-    <span>Home</span>
-  </a>
-  <a class="mbn-item" id="mbn-transactions" onclick="navigate('transactions');mbnSetActive('transactions')">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-    <span>Transactions</span>
-  </a>
-  <a class="mbn-add" onclick="openAddModal()">
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-  </a>
-  <a class="mbn-item" id="mbn-budgets" onclick="navigate('budgets');mbnSetActive('budgets')">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12V8H6a2 2 0 010-4h14v4"/><path d="M4 6v13a2 2 0 002 2h14v-5"/><path d="M18 12a2 2 0 000 4h4v-4z"/></svg>
-    <span>Budgets</span>
-  </a>
-  <a class="mbn-item" id="mbn-settings" onclick="navigate('settings');mbnSetActive('settings')">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 010 14.14M4.93 4.93a10 10 0 000 14.14"/><path d="M15.54 8.46a5 5 0 010 7.07M8.46 8.46a5 5 0 000 7.07"/></svg>
-    <span>Settings</span>
-  </a>
-</nav>
 
 <!-- ===================== ADD TRANSACTION MODAL ===================== -->
 <div id="add-modal" class="modal-overlay hidden" onclick="closeModalOnOverlay(event,'add-modal')">

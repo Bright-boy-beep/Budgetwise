@@ -4741,3 +4741,15 @@ button:focus-visible {
   .page-header h2 { font-size: 19px; }
   .main-content { padding-left: 12px; padding-right: 12px; }
 }
+
+/* ============================================================================
+   Global font: Poppins  +  remove mobile bottom navigation
+   ============================================================================ */
+* { font-family: 'Poppins', system-ui, -apple-system, "Segoe UI", sans-serif !important; }
+
+.mobile-bottom-nav { display: none !important; }
+
+@media (max-width: 768px) {
+  /* no bottom nav → reclaim the space it used */
+  .main-content { padding-bottom: calc(24px + env(safe-area-inset-bottom)) !important; }
+}
