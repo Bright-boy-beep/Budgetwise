@@ -7,8 +7,8 @@
      • Google Fonts              → Cache-first
    ============================================================ */
 
-const CACHE_NAME    = 'budgetwise-v5';
-const API_CACHE     = 'budgetwise-api-v5';
+const CACHE_NAME    = 'budgetwise-v6';
+const API_CACHE     = 'budgetwise-api-v6';
 
 // Only cache URLs that Flask actually serves — missing any one causes SW install to fail
 const APP_SHELL = [

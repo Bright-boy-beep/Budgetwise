@@ -4753,3 +4753,36 @@ button:focus-visible {
   /* no bottom nav → reclaim the space it used */
   .main-content { padding-bottom: calc(24px + env(safe-area-inset-bottom)) !important; }
 }
+
+/* ============================================================================
+   Text-fit fixes — stop labels being clipped (esp. after the Poppins switch)
+   ============================================================================ */
+
+/* Financial Health gauge: keep the grade label neatly inside the ring */
+.health-score-grade {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  text-align: center;
+  line-height: 1.15;
+  max-width: 84px;
+  white-space: normal;
+  overflow-wrap: break-word;
+}
+.health-gauge-inner { padding: 0 6px; }
+
+/* General safeguard: long words wrap instead of spilling out of their box */
+.sub, .health-card-sub, .health-card-title, .hf-name, .hf-val,
+.empty-state-sub, .empty-state-title, .dash-card-header,
+.settings-card-sub, .settings-card-title, .modal-body,
+.forecast-stat-box, .badge, .card p, td, th {
+  overflow-wrap: break-word;
+  word-break: normal;
+}
+
+/* Card value figures shouldn't force horizontal overflow on small screens */
+@media (max-width: 768px) {
+  .health-score-num { font-size: 26px; }
+  .summary-value, .stat-value, .kpi-value { overflow-wrap: break-word; }
+}
