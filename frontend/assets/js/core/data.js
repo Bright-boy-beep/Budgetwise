@@ -12,7 +12,12 @@
 // ============================================================
 
 // ── Base URL ─────────────────────────────────────────────────
-const API_BASE = 'http://localhost:5000/api';
+// API base: use the same origin the app is served from (works when hosted,
+// on a phone over the LAN, or via a tunnel). Falls back to localhost:5000
+// only for the VS Code Live Server dev setup (port 5500) or file:// preview.
+const API_BASE = (location.protocol === 'file:' || location.port === '5500' || location.port === '5501')
+  ? 'http://localhost:5000/api'
+  : location.origin + '/api';
 
 // ============================================================
 // API — HTTP client
@@ -53,10 +58,10 @@ const API = {
     return data;
   },
 
-  get:    (path)        => API.request('GET',    path),
-  post:   (path, body)  => API.request('POST',   path, body),
-  put:    (path, body)  => API.request('PUT',    path, body),
-  delete: (path)        => API.request('DELETE', path),
+  get:    (path)              => API.request('GET',    path),
+  post:   (path, body)        => API.request('POST',   path, body),
+  put:    (path, body)        => API.request('PUT',    path, body),
+  delete: (path, body = null) => API.request('DELETE', path, body),
 };
 
 // ============================================================

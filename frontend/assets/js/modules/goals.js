@@ -114,6 +114,12 @@ function _renderGoalCard(g, curr) {
             <line x1="8" y1="12" x2="16" y2="12"/>
           </svg>
         </button>
+        <button class="goal-btn-icon" onclick="openEditGoalModal('${g.id}')" title="Edit goal">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+          </svg>
+        </button>
         <button class="goal-btn-icon danger" onclick="deleteGoal('${g.id}')" title="Delete">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="3 6 5 6 21 6"/>
@@ -171,10 +177,47 @@ function openGoalModal() {
     ).join('');
     _syncGoalColor();
   }
+  document.getElementById('goal-edit-id').value      = '';
   document.getElementById('goal-name').value         = '';
   document.getElementById('goal-target').value       = '';
   document.getElementById('goal-saved-init').value   = '';
   document.getElementById('goal-deadline').value     = '';
+  // Restore "Add" mode labels
+  document.getElementById('goal-modal-title').textContent  = 'New Savings Goal';
+  document.getElementById('goal-submit-btn').textContent   = 'Create Goal';
+  const savedWrap = document.getElementById('goal-saved-init-wrap');
+  if (savedWrap) savedWrap.style.display = '';
+  document.getElementById('add-goal-modal').classList.remove('hidden');
+}
+
+/* ── Edit Goal Modal ─────────────────────────────────────────────────────── */
+function openEditGoalModal(id) {
+  const goal = DB.getGoals().find(g => g.id === String(id));
+  if (!goal) return;
+
+  // Populate category select
+  const catSel = document.getElementById('goal-category');
+  if (catSel) {
+    catSel.innerHTML = GOAL_CATEGORIES.map(c =>
+      `<option value="${c.name}"${c.name === goal.category ? ' selected' : ''}>${c.name}</option>`
+    ).join('');
+  }
+
+  // Pre-fill all fields with current values
+  document.getElementById('goal-edit-id').value    = goal.id;
+  document.getElementById('goal-name').value       = goal.name;
+  document.getElementById('goal-target').value     = goal.target_amount;
+  document.getElementById('goal-deadline').value   = goal.deadline || '';
+  document.getElementById('goal-color').value      = goal.color || '#7B5CF5';
+
+  // Hide "Already Saved" — saved amount is managed via contributions only
+  const savedWrap = document.getElementById('goal-saved-init-wrap');
+  if (savedWrap) savedWrap.style.display = 'none';
+
+  // Switch modal to "Edit" mode labels
+  document.getElementById('goal-modal-title').textContent  = 'Edit Goal';
+  document.getElementById('goal-submit-btn').textContent   = 'Save Changes';
+
   document.getElementById('add-goal-modal').classList.remove('hidden');
 }
 
@@ -187,27 +230,44 @@ function _syncGoalColor() {
 }
 
 async function saveGoal() {
-  const name       = document.getElementById('goal-name').value.trim();
-  const target     = parseFloat(document.getElementById('goal-target').value);
-  const savedInit  = parseFloat(document.getElementById('goal-saved-init').value) || 0;
-  const category   = document.getElementById('goal-category').value;
-  const deadline   = document.getElementById('goal-deadline').value || null;
-  const color      = document.getElementById('goal-color').value;
+  const editId   = document.getElementById('goal-edit-id').value;
+  const name     = document.getElementById('goal-name').value.trim();
+  const target   = parseFloat(document.getElementById('goal-target').value);
+  const category = document.getElementById('goal-category').value;
+  const deadline = document.getElementById('goal-deadline').value || null;
+  const color    = document.getElementById('goal-color').value;
 
   if (!name)                  { showToast('Please enter a goal name.'); return; }
   if (!target || target <= 0) { showToast('Please enter a valid target amount.'); return; }
 
-  const btn = document.querySelector('#add-goal-modal .btn-primary');
+  const btn = document.getElementById('goal-submit-btn');
   if (btn) btn.disabled = true;
-  try {
-    await DB.addGoal({ name, target_amount: target, saved_amount: savedInit, category, deadline, color });
-    closeModal('add-goal-modal');
-    showToast('Goal created.', 'success');
-    renderGoals();
-  } catch (e) {
-    showToast('Could not create goal. Please try again.', 'error');
-  } finally {
-    if (btn) btn.disabled = false;
+
+  if (editId) {
+    // ── Edit existing goal ──────────────────────────────────────
+    try {
+      await DB.updateGoal(editId, { name, target_amount: target, category, deadline, color });
+      closeModal('add-goal-modal');
+      showToast('Goal updated.', 'success');
+      renderGoals();
+    } catch (e) {
+      showToast('Could not update goal. Please try again.', 'error');
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  } else {
+    // ── Create new goal ─────────────────────────────────────────
+    const savedInit = parseFloat(document.getElementById('goal-saved-init').value) || 0;
+    try {
+      await DB.addGoal({ name, target_amount: target, saved_amount: savedInit, category, deadline, color });
+      closeModal('add-goal-modal');
+      showToast('Goal created.', 'success');
+      renderGoals();
+    } catch (e) {
+      showToast('Could not create goal. Please try again.', 'error');
+    } finally {
+      if (btn) btn.disabled = false;
+    }
   }
 }
 

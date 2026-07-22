@@ -4,6 +4,28 @@
 
 let currentPage = 'dashboard';
 
+/**
+ * Render a profile photo (Google avatar) or a letter initial into an element.
+ * @param {HTMLElement} el  - The container div (e.g. .user-avatar, .settings-avatar)
+ * @param {string}  name    - Display name (used for the fallback initial)
+ * @param {string|null} url - Avatar image URL (from Google), or null/empty for initials
+ */
+function _setAvatar(el, name, url) {
+  if (!el) return;
+  if (url) {
+    el.textContent = '';   // clear any existing initial
+    const img = document.createElement('img');
+    img.src = url;
+    img.alt = name || 'Avatar';
+    img.className = 'avatar-photo';
+    // Fallback: if the image fails to load, show the initial instead
+    img.onerror = () => { el.textContent = (name || 'U')[0].toUpperCase(); };
+    el.appendChild(img);
+  } else {
+    el.textContent = (name || 'U')[0].toUpperCase();
+  }
+}
+
 function initApp(user) {
   // Apply saved settings
   const settings = DB.getSettings();
@@ -15,7 +37,7 @@ function initApp(user) {
   // Set up sidebar user info
   document.getElementById('sidebar-name').textContent  = user.name || 'User';
   document.getElementById('sidebar-email').textContent = user.email || '';
-  document.getElementById('sidebar-avatar').textContent = (user.name || 'U')[0].toUpperCase();
+  _setAvatar(document.getElementById('sidebar-avatar'), user.name, user.avatar_url || null);
 
   // Greeting
   setGreeting();
@@ -29,8 +51,7 @@ function initApp(user) {
   document.getElementById('settings-opening-balance').value = settings.openingBalance || 0;
 
   // Sync avatar display in settings
-  const avatarEl = document.getElementById('settings-avatar-display');
-  if (avatarEl) avatarEl.textContent = (displayName || 'U')[0].toUpperCase();
+  _setAvatar(document.getElementById('settings-avatar-display'), displayName, user.avatar_url || null);
   const avatarName = document.getElementById('settings-avatar-name');
   if (avatarName) avatarName.textContent = displayName || 'User';
   const avatarEmail = document.getElementById('settings-avatar-email');
@@ -41,6 +62,9 @@ function initApp(user) {
 
   // Populate filter categories
   populateFilterCategories();
+
+  // Reveal admin navigation for administrator accounts
+  if (user && user.is_admin) document.querySelectorAll('.admin-only').forEach(el => el.style.display = '');
 
   // Navigate to dashboard
   navigate('dashboard');
@@ -61,7 +85,7 @@ function navigate(page) {
   });
 
   // Update topbar title
-  const titles = { dashboard:'Dashboard', transactions:'Transactions', budgets:'Budgets', analytics:'Analytics', 'ml-insights':'ML Insights', goals:'Goals', reports:'Reports', settings:'Settings' };
+  const titles = { dashboard:'Dashboard', transactions:'Transactions', budgets:'Budgets', analytics:'Analytics', 'ml-insights':'ML Insights', goals:'Goals', reports:'Reports', settings:'Settings', admin:'Admin Dashboard' };
   document.getElementById('page-title').textContent = titles[page] || page;
 
   // Close sidebar on mobile
@@ -90,6 +114,9 @@ function mbnSetActive(page) {
 
 function renderPage(page) {
   switch (page) {
+    case 'admin':
+      renderAdmin();
+      break;
     case 'dashboard':
       updateSummaryCards();
       renderRecentTransactions();
@@ -237,14 +264,16 @@ async function saveSettings() {
     updateCurrencyLabels();
     // Update sidebar
     if (name) {
-      document.getElementById('sidebar-name').textContent  = name;
-      document.getElementById('sidebar-avatar').textContent = name[0].toUpperCase();
+      document.getElementById('sidebar-name').textContent = name;
+      const avatarUrl = DB.getSession()?.avatar_url || null;
+      _setAvatar(document.getElementById('sidebar-avatar'), name, avatarUrl);
     }
     // Update settings avatar display
+    const avatarUrl  = DB.getSession()?.avatar_url || null;
     const avatarEl   = document.getElementById('settings-avatar-display');
     const avatarName = document.getElementById('settings-avatar-name');
-    if (avatarEl && name)   avatarEl.textContent  = name[0].toUpperCase();
-    if (avatarName && name) avatarName.textContent = name;
+    if (avatarEl)            _setAvatar(avatarEl, name, avatarUrl);
+    if (avatarName && name)  avatarName.textContent = name;
     showToast('Settings updated.', 'success');
     refreshAll();
   } catch (e) {
@@ -392,6 +421,57 @@ function clearAllData() {
   refreshAll();
 }
 
+// ---- Delete Account ----
+
+function openDeleteAccountModal() {
+  const emailInput = document.getElementById('delete-acct-email');
+  const errEl      = document.getElementById('delete-acct-error');
+  const btn        = document.getElementById('delete-acct-btn');
+  if (emailInput) emailInput.value = '';
+  if (errEl)      errEl.classList.add('hidden');
+  if (btn)        btn.disabled = true;
+  document.getElementById('delete-account-modal').classList.remove('hidden');
+  setTimeout(() => emailInput?.focus(), 80);
+}
+
+function onDeleteEmailInput() {
+  const emailInput = document.getElementById('delete-acct-email');
+  const btn        = document.getElementById('delete-acct-btn');
+  const session    = DB.getSession();
+  const userEmail  = (session?.email || '').toLowerCase();
+  const typed      = (emailInput?.value || '').trim().toLowerCase();
+  if (btn) btn.disabled = (typed !== userEmail);
+}
+
+async function deleteAccount() {
+  const emailInput = document.getElementById('delete-acct-email');
+  const errEl      = document.getElementById('delete-acct-error');
+  const btn        = document.getElementById('delete-acct-btn');
+  const email      = (emailInput?.value || '').trim().toLowerCase();
+
+  if (!email) return;
+  if (errEl) errEl.classList.add('hidden');
+  if (btn)   { btn.disabled = true; btn.textContent = 'Deleting…'; }
+
+  try {
+    await API.delete('/auth/me', { email });
+    // Wipe everything locally, then bounce back to login
+    DB.clearSession();
+    localStorage.clear();
+    showToast('Your account has been permanently deleted.', 'info', 2500);
+    setTimeout(() => location.reload(), 2600);
+  } catch (e) {
+    if (errEl) {
+      errEl.textContent = e.message || 'Could not delete account. Please try again.';
+      errEl.classList.remove('hidden');
+    }
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg> Permanently Delete`;
+    }
+  }
+}
+
 // ---- Greeting ----
 
 function setGreeting() {
@@ -448,10 +528,11 @@ function renderSettings() {
   if (balEl)   balEl.value   = settings.openingBalance || 0;
 
   // Avatar card
-  const avatarEl   = document.getElementById('settings-avatar-display');
-  const avatarName = document.getElementById('settings-avatar-name');
+  const avatarUrl   = session?.avatar_url || null;
+  const avatarEl    = document.getElementById('settings-avatar-display');
+  const avatarName  = document.getElementById('settings-avatar-name');
   const avatarEmail = document.getElementById('settings-avatar-email');
-  if (avatarEl)    avatarEl.textContent   = (name || 'U')[0].toUpperCase();
+  if (avatarEl)    _setAvatar(avatarEl, name, avatarUrl);
   if (avatarName)  avatarName.textContent = name  || 'User';
   if (avatarEmail) avatarEmail.textContent = email;
 
@@ -1514,3 +1595,75 @@ function clearAllNotifs() {
 
 // NOTE: Auto-login on page load is handled in auth.js (DOMContentLoaded listener).
 // initApp() is called by auth.js after DB.loadAll() completes successfully.
+
+// ============================================================
+// Admin dashboard (visible only to administrator accounts)
+// ============================================================
+async function renderAdmin() {
+  const statsEl = document.getElementById('admin-stats');
+  const usersEl = document.getElementById('admin-users');
+  if (!statsEl || !usersEl) return;
+  statsEl.innerHTML = '<p class="sub">Loading…</p>';
+  usersEl.innerHTML = '';
+  try {
+    const [stats, users] = await Promise.all([
+      API.get('/admin/stats'),
+      API.get('/admin/users'),
+    ]);
+    const card = (label, value) =>
+      `<div class="admin-stat-card"><div class="admin-stat-value">${value}</div><div class="admin-stat-label">${label}</div></div>`;
+    statsEl.innerHTML =
+      card('Total Users', stats.users) +
+      card('Active Users', stats.active_users) +
+      card('Administrators', stats.admins) +
+      card('Transactions', stats.transactions) +
+      card('Budgets', stats.budgets) +
+      card('Goals', stats.goals);
+
+    const me = DB.getSession() || {};
+    const rows = users.map(u => {
+      const badge  = u.is_admin ? '<span class="admin-badge admin-badge-admin">Admin</span>' : '';
+      const status = u.is_active
+        ? '<span class="admin-badge admin-badge-active">Active</span>'
+        : '<span class="admin-badge admin-badge-inactive">Deactivated</span>';
+      const isSelf = String(u.id) === String(me.id);
+      let actions;
+      if (isSelf) {
+        actions = '<span class="sub">(you)</span>';
+      } else {
+        actions = u.is_active
+          ? `<button class="admin-btn" onclick="adminSetStatus(${u.id}, false)">Deactivate</button>`
+          : `<button class="admin-btn admin-btn-green" onclick="adminSetStatus(${u.id}, true)">Activate</button>`;
+        if (!u.is_admin) {
+          const safe = (u.name || '').replace(/[^a-zA-Z0-9 ]/g, '');
+          actions += `<button class="admin-btn admin-btn-red" onclick="adminDeleteUser(${u.id}, '${safe}')">Delete</button>`;
+        }
+      }
+      return `<tr>
+        <td>${u.name || '—'} ${badge}</td>
+        <td>${u.email || ''}</td>
+        <td style="text-align:center">${u.transactions}</td>
+        <td style="text-align:center">${u.budgets}</td>
+        <td style="text-align:center">${u.goals}</td>
+        <td>${status}</td>
+        <td>${actions}</td>
+      </tr>`;
+    }).join('');
+    usersEl.innerHTML = `<table class="admin-table">
+      <thead><tr><th>Name</th><th>Email</th><th>Txns</th><th>Budgets</th><th>Goals</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody>${rows}</tbody></table>`;
+  } catch (e) {
+    statsEl.innerHTML = `<p class="sub" style="color:#c0392b">${e.message}</p>`;
+  }
+}
+
+async function adminSetStatus(id, active) {
+  try { await API.put('/admin/users/' + id + '/status', { active }); renderAdmin(); }
+  catch (e) { alert(e.message); }
+}
+
+async function adminDeleteUser(id, name) {
+  if (!confirm('Delete user ' + (name || '') + ' and all of their data? This cannot be undone.')) return;
+  try { await API.delete('/admin/users/' + id); renderAdmin(); }
+  catch (e) { alert(e.message); }
+}

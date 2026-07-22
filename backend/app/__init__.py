@@ -10,11 +10,13 @@ from flask import Flask, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from flask_jwt_extended import JWTManager
 from flask_cors import CORS
+from flask_mail import Mail
 
 from .config import Config
 
-db = SQLAlchemy()
+db  = SQLAlchemy()
 jwt = JWTManager()
+mail = Mail()
 
 # Absolute path to the frontend folder (one level up from backend/app/)
 FRONTEND_DIR = os.path.abspath(
@@ -29,6 +31,7 @@ def create_app(config_class=Config):
     # Initialise extensions
     db.init_app(app)
     jwt.init_app(app)
+    mail.init_app(app)
     CORS(app, resources={r"/api/*": {"origins": "*"}})
 
     # Register blueprints
@@ -37,12 +40,14 @@ def create_app(config_class=Config):
     from .routes.budgets import budgets_bp
     from .routes.predictions import predictions_bp
     from .routes.goals import goals_bp
+    from .routes.admin import admin_bp
 
     app.register_blueprint(auth_bp,         url_prefix="/api/auth")
     app.register_blueprint(transactions_bp, url_prefix="/api/transactions")
     app.register_blueprint(budgets_bp,      url_prefix="/api/budgets")
     app.register_blueprint(predictions_bp,  url_prefix="/api/ml")
     app.register_blueprint(goals_bp,        url_prefix="/api/goals")
+    app.register_blueprint(admin_bp,        url_prefix="/api/admin")
 
     # Serve the frontend — explicit routes so /api/* is never touched
     @app.route('/')
@@ -84,18 +89,55 @@ def create_app(config_class=Config):
     with app.app_context():
         db.create_all()
         _migrate_db(db)
+        _bootstrap_admin(db)
 
     return app
+
+
+def _bootstrap_admin(db):
+    """
+    Create or promote an administrator account from environment variables
+    (ADMIN_EMAIL, ADMIN_PASSWORD, ADMIN_NAME). Runs on every startup so the
+    admin always exists on a freshly-provisioned production database. It never
+    overwrites the password of an account that already exists.
+    """
+    import os, bcrypt
+    from .models.user import User
+    email = (os.environ.get("ADMIN_EMAIL", "") or "").strip().lower()
+    pw    =  os.environ.get("ADMIN_PASSWORD", "") or ""
+    if not email or not pw:
+        return
+    user = User.query.filter_by(email=email).first()
+    if user:
+        if not user.is_admin:
+            user.is_admin = True
+            user.is_active = True
+            db.session.commit()
+            print(f"[bootstrap] Promoted {email} to administrator")
+    else:
+        hashed = bcrypt.hashpw(pw.encode(), bcrypt.gensalt()).decode()
+        db.session.add(User(name=os.environ.get("ADMIN_NAME", "Administrator"),
+                            email=email, password=hashed, is_admin=True, is_active=True))
+        db.session.commit()
+        print(f"[bootstrap] Created administrator account {email}")
 
 
 def _migrate_db(db):
     """
     Lightweight migration: add any columns that exist in the model but are
     missing from the live SQLite database. Safe to run on every startup.
+    (Skipped on non-SQLite databases, where create_all already builds the
+    full schema.)
     """
+    if db.engine.dialect.name != "sqlite":
+        return
     migrations = [
-        ("users", "google_id",  "VARCHAR(255)"),
-        ("users", "avatar_url", "VARCHAR(512)"),
+        ("users", "google_id",           "VARCHAR(255)"),
+        ("users", "avatar_url",          "VARCHAR(512)"),
+        ("users", "reset_token",         "VARCHAR(128)"),
+        ("users", "reset_token_expiry",  "DATETIME"),
+        ("users", "is_admin",            "BOOLEAN DEFAULT 0"),
+        ("users", "is_active",           "BOOLEAN DEFAULT 1"),
     ]
     with db.engine.connect() as conn:
         from sqlalchemy import text, inspect
